@@ -28,19 +28,21 @@ export default function ZodiacDetailScreen() {
 
   useEffect(() => {
     // Initial entrance animation
-    Animated.timing(animatedValue, {
-      toValue: 1,
-      duration: 1000,
+    Animated.spring(animatedValue, {
+      toValue: 0,
       useNativeDriver: true,
+      tension: 50,
+      friction: 8,
     }).start();
   }, []);
 
   const flipCard = () => {
     setIsFlipped(!isFlipped);
-    Animated.timing(animatedValue, {
-      toValue: isFlipped ? 1 : 0,
-      duration: 800,
+    Animated.spring(animatedValue, {
+      toValue: isFlipped ? 0 : 1,
       useNativeDriver: true,
+      tension: 50,
+      friction: 8,
     }).start();
   };
 
@@ -108,7 +110,8 @@ export default function ZodiacDetailScreen() {
 
         {/* 3D Animated Card */}
         <View style={styles.cardContainer}>
-          <TouchableOpacity onPress={flipCard} style={styles.card3D}>
+          <TouchableOpacity onPress={flipCard} style={styles.card3D} activeOpacity={1}>
+            {/* Front Card */}
             <Animated.View style={[styles.cardFace, styles.cardFront, frontAnimatedStyle]}>
               <LinearGradient
                 colors={['#2D1B69', '#1E1B4B']}
@@ -116,6 +119,7 @@ export default function ZodiacDetailScreen() {
               >
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>{data?.name.toUpperCase()}</Text>
+                  <Text style={styles.cardDates}>{data?.dates}</Text>
                 </View>
                 
                 <View style={styles.symbolContainer}>
@@ -137,14 +141,20 @@ export default function ZodiacDetailScreen() {
                     <Text style={styles.infoLabel}>Nitelik</Text>
                     <Text style={styles.infoValue}>Değişken</Text>
                   </View>
-                  <View style={styles.infoRow}>
+                  <View style={styles.infoRowKeywords}>
                     <Text style={styles.infoLabel}>Anahtar Kelimeler</Text>
-                    <Text style={styles.infoValue}>{data?.traits.positive.slice(0, 3).join(', ')}</Text>
+                    <Text style={styles.infoValueKeywords}>{data?.traits.positive.slice(0, 3).join(', ')}</Text>
                   </View>
                 </View>
+
+                {/* Daha Fazlasını Keşfet Butonu - Ön yüzde */}
+                <TouchableOpacity style={styles.exploreButtonFront} onPress={handleExploreMore}>
+                  <Text style={styles.exploreButtonText}>Daha Fazlasını Keşfet</Text>
+                </TouchableOpacity>
               </LinearGradient>
             </Animated.View>
 
+            {/* Back Card */}
             <Animated.View style={[styles.cardFace, styles.cardBack, backAnimatedStyle]}>
               <LinearGradient
                 colors={['#1E1B4B', '#2D1B69']}
@@ -152,10 +162,26 @@ export default function ZodiacDetailScreen() {
               >
                 <View style={styles.backContent}>
                   <Text style={styles.backTitle}>{data?.name.toUpperCase()}</Text>
+                  <Text style={styles.backSubtitle}>Burç Yorumu</Text>
                   <Text style={styles.backDescription}>{data?.description}</Text>
                   
-                  <TouchableOpacity style={styles.exploreButton} onPress={handleExploreMore}>
-                    <Text style={styles.exploreButtonText}>Daha Fazlasını Keşfet</Text>
+                  <View style={styles.traitsSection}>
+                    <View style={styles.traitsColumn}>
+                      <Text style={styles.traitsTitle}>Olumlu Özellikler</Text>
+                      {data?.traits.positive.slice(0, 3).map((trait, index) => (
+                        <Text key={index} style={styles.traitItem}>• {trait}</Text>
+                      ))}
+                    </View>
+                    <View style={styles.traitsColumn}>
+                      <Text style={styles.traitsTitle}>Gelişim Alanları</Text>
+                      {data?.traits.negative.slice(0, 3).map((trait, index) => (
+                        <Text key={index} style={styles.traitItem}>• {trait}</Text>
+                      ))}
+                    </View>
+                  </View>
+
+                  <TouchableOpacity style={styles.exploreButtonBack} onPress={handleExploreMore}>
+                    <Text style={styles.exploreButtonText}>Günlük Yorumları Gör</Text>
                   </TouchableOpacity>
                 </View>
               </LinearGradient>
@@ -216,7 +242,7 @@ const styles = StyleSheet.create({
   },
   // 3D Card Styles
   cardContainer: {
-    height: 500,
+    height: 600,
     marginHorizontal: 20,
     marginBottom: 30,
   },
@@ -260,6 +286,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 2,
   },
+  cardDates: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginTop: 5,
+  },
   symbolContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -293,11 +324,18 @@ const styles = StyleSheet.create({
   },
   cardInfo: {
     marginTop: 20,
+    marginBottom: 20,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  infoRowKeywords: {
+    flexDirection: 'column',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
@@ -312,6 +350,28 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
+  infoValueKeywords: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  exploreButtonFront: {
+    backgroundColor: '#8B5CF6',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 25,
+    alignSelf: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+    marginTop: 10,
+  },
   // Back Card Styles
   backContent: {
     flex: 1,
@@ -323,17 +383,60 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 30,
+    marginBottom: 10,
     letterSpacing: 2,
+  },
+  backSubtitle: {
+    fontSize: 16,
+    color: '#8B5CF6',
+    fontWeight: '600',
+    marginBottom: 20,
   },
   backDescription: {
     fontSize: 16,
     color: '#E2E8F0',
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 40,
+    marginBottom: 30,
+  },
+  traitsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 30,
+  },
+  traitsColumn: {
+    flex: 1,
+    paddingHorizontal: 10,
+  },
+  traitsTitle: {
+    fontSize: 14,
+    color: '#8B5CF6',
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  traitItem: {
+    fontSize: 12,
+    color: '#E2E8F0',
+    marginBottom: 5,
+    textAlign: 'center',
   },
   exploreButton: {
+    backgroundColor: '#8B5CF6',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 25,
+    shadowColor: '#8B5CF6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  exploreButtonBack: {
     backgroundColor: '#8B5CF6',
     paddingVertical: 16,
     paddingHorizontal: 32,
