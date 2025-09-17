@@ -1,311 +1,458 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  StyleSheet, 
-  SafeAreaView,
-  ActivityIndicator,
-  Alert,
-  TouchableOpacity,
-  Dimensions
-} from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { ArrowLeft, ChevronLeft, ChevronRight, Heart, Star } from 'lucide-react-native';
 import { ZodiacService } from '@/services/zodiacService';
-import { DailyHoroscope } from '@/types/zodiac';
 
 const { width } = Dimensions.get('window');
 
-type HoroscopeCategory = 'general' | 'love' | 'career' | 'health';
+const months = [
+  'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+  'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+];
+
+const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 interface TabData {
-  key: HoroscopeCategory;
+  id: string;
   title: string;
-  icon: string;
+  color: string;
 }
 
-const TABS: TabData[] = [
-  { key: 'general', title: 'Genel', icon: '🌟' },
-  { key: 'love', title: 'Aşk', icon: '❤️' },
-  { key: 'career', title: 'Kariyer', icon: '💼' },
-  { key: 'health', title: 'Sağlık', icon: '🏥' },
+const tabs: TabData[] = [
+  { id: 'general', title: 'Genel Bakış', color: '#8B5CF6' },
+  { id: 'love', title: 'Aşk', color: '#EF4444' },
+  { id: 'career', title: 'Kariyer', color: '#10B981' },
+  { id: 'friendship', title: 'Arkadaşlık', color: '#F59E0B' },
+  { id: 'health', title: 'Sağlık', color: '#06B6D4' },
 ];
 
 export default function DailyHoroscopeScreen() {
-  const { signId, signName } = useLocalSearchParams<{ signId: string; signName: string }>();
-  const [horoscope, setHoroscope] = useState<DailyHoroscope | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<HoroscopeCategory>('general');
+  const router = useRouter();
+  const { sign, name } = useLocalSearchParams();
+  
+  const zodiacKey = (sign as string)?.toLowerCase();
+  const data = ZodiacService.getZodiacSign(zodiacKey);
+
+  // Debug için
+  console.log('Daily Horoscope Debug:', {
+    sign,
+    name,
+    zodiacKey,
+    dataFound: !!data
+  });
+
+  const [activeTab, setActiveTab] = useState('general');
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  useEffect(() => {
-    if (signId) {
-      loadHoroscope(parseInt(signId), ZodiacService.formatDate(selectedDate));
-    }
-  }, [signId, selectedDate]);
-
-  const loadHoroscope = async (id: number, date: string) => {
-    try {
-      setLoading(true);
-      const { data, error } = await ZodiacService.getDailyHoroscope(id, date);
-      
-      if (error) {
-        Alert.alert('Hata', error);
-        return;
-      }
-
-      setHoroscope(data);
-    } catch (error) {
-      console.error('Error loading horoscope:', error);
-      Alert.alert('Hata', 'Günlük yorum yüklenirken bir hata oluştu');
-    } finally {
-      setLoading(false);
-    }
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
 
-  const getTabContent = (category: HoroscopeCategory): string => {
-    if (!horoscope) return 'Günlük yorum bulunamadı.';
-    
-    switch (category) {
-      case 'general':
-        return horoscope.general_overview || 'Genel yorum mevcut değil.';
-      case 'love':
-        return horoscope.love_commentary || 'Aşk yorumu mevcut değil.';
-      case 'career':
-        return horoscope.career_commentary || 'Kariyer yorumu mevcut değil.';
-      case 'health':
-        return horoscope.health_commentary || 'Sağlık yorumu mevcut değil.';
-      default:
-        return 'İçerik bulunamadı.';
-    }
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('tr-TR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const navigateDateArrow = (direction: 'prev' | 'next') => {
-    const newDate = new Date(selectedDate);
+  const changeMonth = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
     if (direction === 'prev') {
-      newDate.setDate(newDate.getDate() - 1);
+      newDate.setMonth(newDate.getMonth() - 1);
     } else {
-      newDate.setDate(newDate.getDate() + 1);
+      newDate.setMonth(newDate.getMonth() + 1);
     }
-    setSelectedDate(newDate);
+    setCurrentDate(newDate);
   };
 
-  if (loading) {
+  const renderCalendar = () => {
+    const daysInMonth = getDaysInMonth(currentDate);
+    const firstDay = getFirstDayOfMonth(currentDate);
+    const days = [];
+
+    // Empty cells for days before month starts
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<View key={`empty-${i}`} style={styles.calendarDay} />);
+    }
+
+    // Days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const isSelected = selectedDate.getDate() === day && 
+                        selectedDate.getMonth() === currentDate.getMonth() &&
+                        selectedDate.getFullYear() === currentDate.getFullYear();
+      const isToday = new Date().getDate() === day && 
+                     new Date().getMonth() === currentDate.getMonth() &&
+                     new Date().getFullYear() === currentDate.getFullYear();
+
+      days.push(
+        <TouchableOpacity
+          key={day}
+          style={[
+            styles.calendarDay,
+            isSelected && styles.selectedDay,
+            isToday && styles.todayDay,
+          ]}
+          onPress={() => {
+            const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+            setSelectedDate(newDate);
+          }}
+        >
+          <Text style={[
+            styles.calendarDayText,
+            isSelected && styles.selectedDayText,
+            isToday && styles.todayDayText,
+          ]}>
+            {day}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+
+    return days;
+  };
+
+  const getTabContent = () => {
+    const horoscope = ZodiacService.generateDailyHoroscope(zodiacKey, selectedDate);
+    
+    switch (activeTab) {
+      case 'general':
+        return {
+          icon: <Star size={20} color="#8B5CF6" />,
+          title: 'Genel Bakış',
+          content: horoscope?.generalFortune || 'Bugün enerjiniz yüksek. Yeni projelere başlamak için ideal bir gün.'
+        };
+      case 'love':
+        return {
+          icon: <Heart size={20} color="#EF4444" />,
+          title: 'Aşk',
+          content: horoscope?.loveFortune || 'Aşk hayatınızda pozitif gelişmeler yaşayabilirsiniz. İletişime özen gösterin.'
+        };
+      case 'career':
+        return {
+          icon: <Star size={20} color="#10B981" />,
+          title: 'Kariyer',
+          content: horoscope?.careerFortune || 'Kariyerinizde yeni fırsatlar doğabilir. Sabırlı olun ve planlarınızı gözden geçirin.'
+        };
+      case 'friendship':
+        return {
+          icon: <Star size={20} color="#F59E0B" />,
+          title: 'Arkadaşlık',
+          content: 'Arkadaşlarınızla güzel anlar geçirebilirsiniz. Sosyal etkinliklere katılmak size iyi gelecek.'
+        };
+      case 'health':
+        return {
+          icon: <Star size={20} color="#06B6D4" />,
+          title: 'Sağlık',
+          content: horoscope?.healthFortune || 'Sağlığınıza dikkat edin. Düzenli beslenme ve egzersiz yapmayı ihmal etmeyin.'
+        };
+      default:
+        return {
+          icon: <Star size={20} color="#8B5CF6" />,
+          title: 'Genel',
+          content: 'Genel bilgi mevcut değil.'
+        };
+    }
+  };
+
+  if (!data) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#6366f1" />
-          <Text style={styles.loadingText}>Günlük yorum yükleniyor...</Text>
+      <LinearGradient colors={['#1E1B4B', '#312E81']} style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Burç bilgisi bulunamadı</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>Geri Dön</Text>
+          </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </LinearGradient>
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header with Date Navigation */}
-      <View style={styles.header}>
-        <Text style={styles.signName}>{signName} Burcu</Text>
-        <View style={styles.dateNavigation}>
-          <TouchableOpacity 
-            style={styles.dateArrow}
-            onPress={() => navigateDateArrow('prev')}
-          >
-            <Text style={styles.arrowText}>‹</Text>
-          </TouchableOpacity>
-          
-          <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
-          
-          <TouchableOpacity 
-            style={styles.dateArrow}
-            onPress={() => navigateDateArrow('next')}
-          >
-            <Text style={styles.arrowText}>›</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+  const tabContent = getTabContent();
 
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
+  return (
+    <LinearGradient colors={['#1E1B4B', '#312E81']} style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerBackButton} onPress={() => router.back()}>
+            <ArrowLeft size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{data.symbol} {data.name}</Text>
+        </View>
+
+        {/* Tab Navigation */}
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabScrollContent}
+          style={styles.tabContainer}
         >
-          {TABS.map((tab) => (
+          {tabs.map((tab) => (
             <TouchableOpacity
-              key={tab.key}
+              key={tab.id}
               style={[
                 styles.tab,
-                activeTab === tab.key && styles.activeTab
+                activeTab === tab.id && { backgroundColor: tab.color }
               ]}
-              onPress={() => setActiveTab(tab.key)}
-              activeOpacity={0.8}
+              onPress={() => setActiveTab(tab.id)}
             >
-              <Text style={styles.tabIcon}>{tab.icon}</Text>
               <Text style={[
                 styles.tabText,
-                activeTab === tab.key && styles.activeTabText
+                activeTab === tab.id && styles.activeTabText
               ]}>
                 {tab.title}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
-      </View>
 
-      {/* Content */}
-      <ScrollView style={styles.contentContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.contentCard}>
-          <Text style={styles.contentText}>
-            {getTabContent(activeTab)}
+        {/* Title */}
+        <Text style={styles.screenTitle}>{data.name} Burcu Günlük Etkileşimler</Text>
+
+        {/* Calendar */}
+        <View style={styles.calendarContainer}>
+          <View style={styles.calendarHeader}>
+            <TouchableOpacity onPress={() => changeMonth('prev')}>
+              <ChevronLeft size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.monthYear}>
+              {months[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </Text>
+            <TouchableOpacity onPress={() => changeMonth('next')}>
+              <ChevronRight size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.weekDays}>
+            {dayNames.map((day) => (
+              <Text key={day} style={styles.weekDayText}>{day}</Text>
+            ))}
+          </View>
+
+          <View style={styles.calendarGrid}>
+            {renderCalendar()}
+          </View>
+        </View>
+
+        {/* Compatibility Section */}
+        <View style={styles.compatibilitySection}>
+          <Text style={styles.compatibilityTitle}>{data.name} ve Koç</Text>
+          <Text style={styles.compatibilitySubtitle}>
+            Bugün, {data.name} ve Koç arasında enerjik bir uyum var. Ortak projelerde başarılı olabilirler.
+          </Text>
+          
+          <Text style={[styles.compatibilityTitle, { marginTop: 20 }]}>
+            {data.name} ve Boğa
+          </Text>
+          <Text style={styles.compatibilitySubtitle}>
+            {data.name} ve Boğa, bugün duygusal konularda derinleşebilir, birbirlerine destek olabilirler.
+          </Text>
+
+          <Text style={[styles.compatibilityTitle, { marginTop: 20 }]}>
+            {data.name} ve İkizler
+          </Text>
+          <Text style={styles.compatibilitySubtitle}>
+            {data.name} ve İkizler arasında iletişimde bazı zorluklar yaşanabilir, dikkatli olunmalı.
           </Text>
         </View>
 
-        {!horoscope && (
-          <View style={styles.noDataCard}>
-            <Text style={styles.noDataText}>
-              Bu tarih için henüz yorum eklenmemiş.
-            </Text>
-            <Text style={styles.noDataSubtext}>
-              Lütfen başka bir tarih seçmeyi deneyin.
-            </Text>
+        {/* Daily Content */}
+        <View style={styles.contentContainer}>
+          <View style={styles.contentHeader}>
+            {tabContent.icon}
+            <Text style={styles.contentTitle}>{tabContent.title}</Text>
           </View>
-        )}
+          <Text style={styles.contentText}>{tabContent.content}</Text>
+        </View>
+
+        <View style={styles.bottomSpacing} />
       </ScrollView>
-    </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
   },
-  centerContainer: {
+  errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
   },
-  loadingText: {
-    color: '#fff',
+  errorText: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  backButton: {
+    backgroundColor: '#8B5CF6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  backButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    marginTop: 16,
   },
   header: {
-    padding: 20,
-    paddingBottom: 0,
-  },
-  signName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  dateNavigation: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
-  dateArrow: {
+  headerBackButton: {
     padding: 8,
-    paddingHorizontal: 12,
+    marginRight: 16,
   },
-  arrowText: {
-    color: '#6366f1',
+  headerTitle: {
     fontSize: 20,
+    color: '#FFFFFF',
     fontWeight: 'bold',
-  },
-  dateText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 16,
   },
   tabContainer: {
-    marginTop: 16,
-  },
-  tabScrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 25,
-    marginRight: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 10,
     borderWidth: 1,
-    borderColor: '#2a2a2a',
-  },
-  activeTab: {
-    backgroundColor: '#6366f1',
-    borderColor: '#6366f1',
-  },
-  tabIcon: {
-    fontSize: 16,
-    marginRight: 8,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   tabText: {
-    color: '#a1a1aa',
+    color: '#94A3B8',
     fontSize: 14,
     fontWeight: '500',
   },
   activeTabText: {
-    color: '#fff',
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
-  contentContainer: {
-    flex: 1,
-    padding: 16,
-  },
-  contentCard: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
-  },
-  contentText: {
-    color: '#d4d4d8',
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  noDataCard: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  noDataText: {
-    color: '#a1a1aa',
-    fontSize: 16,
+  screenTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
     textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+  },
+  calendarContainer: {
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  monthYear: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  weekDays: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 10,
+  },
+  weekDayText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+    width: (width - 80) / 7,
+    textAlign: 'center',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarDay: {
+    width: (width - 80) / 7,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  selectedDay: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 20,
+  },
+  todayDay: {
+    backgroundColor: 'rgba(139, 92, 246, 0.3)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#8B5CF6',
+  },
+  calendarDayText: {
+    fontSize: 14,
+    color: '#E2E8F0',
+  },
+  selectedDayText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  todayDayText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  compatibilitySection: {
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  compatibilityTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
     marginBottom: 8,
   },
-  noDataSubtext: {
-    color: '#71717a',
+  compatibilitySubtitle: {
     fontSize: 14,
-    textAlign: 'center',
+    color: '#94A3B8',
+    lineHeight: 20,
+  },
+  contentContainer: {
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  contentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  contentTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  contentText: {
+    fontSize: 16,
+    color: '#E2E8F0',
+    lineHeight: 24,
+  },
+  bottomSpacing: {
+    height: 40,
   },
 });

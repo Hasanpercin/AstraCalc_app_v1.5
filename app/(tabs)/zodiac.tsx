@@ -15,7 +15,7 @@ interface ZodiacSign {
 
 const zodiacSigns: ZodiacSign[] = [
   {
-    id: 'aries',
+    id: 'koç',
     name: 'Koç',
     englishName: 'Aries',
     dates: '21 Mart - 19 Nisan',
@@ -24,7 +24,7 @@ const zodiacSigns: ZodiacSign[] = [
     description: 'Cesur, enerjik ve lider ruhlu'
   },
   {
-    id: 'taurus',
+    id: 'boğa',
     name: 'Boğa',
     englishName: 'Taurus',
     dates: '20 Nisan - 20 Mayıs',
@@ -33,7 +33,7 @@ const zodiacSigns: ZodiacSign[] = [
     description: 'Sabırlı, güvenilir ve kararlı'
   },
   {
-    id: 'gemini',
+    id: 'ikizler',
     name: 'İkizler',
     englishName: 'Gemini',
     dates: '21 Mayıs - 20 Haziran',
@@ -42,7 +42,7 @@ const zodiacSigns: ZodiacSign[] = [
     description: 'Zeki, meraklı ve çok yönlü'
   },
   {
-    id: 'cancer',
+    id: 'yengeç',
     name: 'Yengeç',
     englishName: 'Cancer',
     dates: '21 Haziran - 22 Temmuz',
@@ -51,7 +51,7 @@ const zodiacSigns: ZodiacSign[] = [
     description: 'Duygusal, koruyucu ve sezgisel'
   },
   {
-    id: 'leo',
+    id: 'aslan',
     name: 'Aslan',
     englishName: 'Leo',
     dates: '23 Temmuz - 22 Ağustos',
@@ -60,7 +60,7 @@ const zodiacSigns: ZodiacSign[] = [
     description: 'Gururlu, yaratıcı ve cömert'
   },
   {
-    id: 'virgo',
+    id: 'başak',
     name: 'Başak',
     englishName: 'Virgo',
     dates: '23 Ağustos - 22 Eylül',
@@ -69,7 +69,7 @@ const zodiacSigns: ZodiacSign[] = [
     description: 'Mükemmeliyetçi, analitik ve pratik'
   },
   {
-    id: 'libra',
+    id: 'terazi',
     name: 'Terazi',
     englishName: 'Libra',
     dates: '23 Eylül - 22 Ekim',
@@ -78,7 +78,7 @@ const zodiacSigns: ZodiacSign[] = [
     description: 'Adaletli, diplomatik ve uyumlu'
   },
   {
-    id: 'scorpio',
+    id: 'akrep',
     name: 'Akrep',
     englishName: 'Scorpio',
     dates: '23 Ekim - 21 Kasım',
@@ -87,7 +87,7 @@ const zodiacSigns: ZodiacSign[] = [
     description: 'Tutkulu, gizemli ve güçlü'
   },
   {
-    id: 'sagittarius',
+    id: 'yay',
     name: 'Yay',
     englishName: 'Sagittarius',
     dates: '22 Kasım - 21 Aralık',
@@ -96,7 +96,7 @@ const zodiacSigns: ZodiacSign[] = [
     description: 'Maceracı, iyimser ve özgür ruhlu'
   },
   {
-    id: 'capricorn',
+    id: 'oğlak',
     name: 'Oğlak',
     englishName: 'Capricorn',
     dates: '22 Aralık - 19 Ocak',
@@ -105,7 +105,7 @@ const zodiacSigns: ZodiacSign[] = [
     description: 'Disiplinli, hırslı ve sorumluluk sahibi'
   },
   {
-    id: 'aquarius',
+    id: 'kova',
     name: 'Kova',
     englishName: 'Aquarius',
     dates: '20 Ocak - 18 Şubat',
@@ -114,7 +114,7 @@ const zodiacSigns: ZodiacSign[] = [
     description: 'Yenilikçi, bağımsız ve insancıl'
   },
   {
-    id: 'pisces',
+    id: 'balık',
     name: 'Balık',
     englishName: 'Pisces',
     dates: '19 Şubat - 20 Mart',
