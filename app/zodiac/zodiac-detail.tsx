@@ -69,6 +69,8 @@ export default function ZodiacDetailScreen() {
   };
 
   const handleExploreMore = () => {
+    console.log('Explore More clicked:', { sign, name });
+    console.log('Navigation path:', `/zodiac/daily-horoscope?sign=${sign}&name=${name}`);
     router.push(`/zodiac/daily-horoscope?sign=${sign}&name=${name}`);
   };
 
@@ -148,7 +150,11 @@ export default function ZodiacDetailScreen() {
                 </View>
 
                 {/* Daha Fazlasını Keşfet Butonu - Ön yüzde */}
-                <TouchableOpacity style={styles.exploreButtonFront} onPress={handleExploreMore}>
+                <TouchableOpacity 
+                  style={styles.exploreButtonFront} 
+                  onPress={handleExploreMore}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.exploreButtonText}>Daha Fazlasını Keşfet</Text>
                 </TouchableOpacity>
               </LinearGradient>
@@ -179,10 +185,6 @@ export default function ZodiacDetailScreen() {
                       ))}
                     </View>
                   </View>
-
-                  <TouchableOpacity style={styles.exploreButtonBack} onPress={handleExploreMore}>
-                    <Text style={styles.exploreButtonText}>Günlük Yorumları Gör</Text>
-                  </TouchableOpacity>
                 </View>
               </LinearGradient>
             </Animated.View>
@@ -423,20 +425,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   exploreButton: {
-    backgroundColor: '#8B5CF6',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 25,
-    shadowColor: '#8B5CF6',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  exploreButtonBack: {
     backgroundColor: '#8B5CF6',
     paddingVertical: 16,
     paddingHorizontal: 32,
