@@ -7,9 +7,9 @@ import { ZodiacService } from '@/services/zodiacService';
 
 export default function ZodiacDetailScreen() {
   const router = useRouter();
-  const { zodiac } = useLocalSearchParams();
+  const { sign, name } = useLocalSearchParams();
   
-  const zodiacKey = (zodiac as string)?.toLowerCase();
+  const zodiacKey = (sign as string)?.toLowerCase();
   const data = ZodiacService.getZodiacSign(zodiacKey);
 
   if (!data) {

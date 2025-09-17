@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, FileText, Sparkles, Settings, Circle, Sun } from 'lucide-react-native';
+import { Home, FileText, Sparkles, Settings, Circle, Sun, Star } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -36,6 +36,15 @@ export default function TabLayout() {
           title: 'Doğum Haritası',
           tabBarIcon: ({ size, color }) => (
             <Circle size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="zodiac"
+        options={{
+          title: 'Burçlar',
+          tabBarIcon: ({ size, color }) => (
+            <Star size={size} color={color} />
           ),
         }}
       />
