@@ -134,7 +134,6 @@ export class HoroscopeCacheService {
       }
       
       console.log(`🧹 Cleared ${clearedCount} expired cache entries`);
-      
       return { success: true, clearedCount };
       
     } catch (error) {

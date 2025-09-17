@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/Hasanpercin/AstroCalc_bolt_app/wiki
+    about: Check the project wiki for setup guides and API documentation
+  - name: 💬 Discussions
+    url: https://github.com/Hasanpercin/AstroCalc_bolt_app/discussions
+    about: Ask questions and discuss astrology features with the community
+  - name: 🆘 Support
+    url: https://github.com/Hasanpercin/AstroCalc_bolt_app/discussions/categories/support
+    about: Get help with app usage and troubleshooting

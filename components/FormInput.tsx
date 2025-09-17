@@ -8,6 +8,10 @@ interface FormInputProps {
   placeholder?: string;
   multiline?: boolean;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  secureTextEntry?: boolean;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoComplete?: string;
+  error?: string;
 }
 
 export default function FormInput({
@@ -17,26 +21,38 @@ export default function FormInput({
   placeholder,
   multiline = false,
   keyboardType = 'default',
+  secureTextEntry = false,
+  autoCapitalize = 'sentences',
+  autoComplete,
+  error,
 }: FormInputProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={[styles.input, multiline && styles.multilineInput]}
+        style={[
+          styles.input, 
+          multiline && styles.multilineInput,
+          error && styles.inputError
+        ]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#64748B"
         multiline={multiline}
         keyboardType={keyboardType}
+        secureTextEntry={secureTextEntry}
+        autoCapitalize={autoCapitalize}
+        autoComplete={autoComplete as any}
       />
+      {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   label: {
     fontSize: 16,
@@ -55,8 +71,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#FFFFFF',
   },
+  inputError: {
+    borderColor: '#EF4444',
+  },
   multilineInput: {
     height: 100,
     textAlignVertical: 'top',
+  },
+  errorText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#EF4444',
+    marginTop: 4,
   },
 });

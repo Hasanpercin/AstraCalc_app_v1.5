@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Chrome as Home, FileText, Sparkles, Settings, Circle, Sun, Bell } from 'lucide-react-native';
+import { Home, FileText, Sparkles, Settings, Circle, Sun } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -18,7 +18,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#94A3B8',
         tabBarLabelStyle: {
           fontSize: 12,
-          fontFamily: 'Inter-Medium',
+          fontWeight: '500',
         },
       }}>
       <Tabs.Screen

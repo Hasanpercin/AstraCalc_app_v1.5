@@ -66,6 +66,9 @@ export interface ValidationErrors {
   last_name?: string;
   email?: string;
   phone?: string;
+  birth_date?: string;
+  birth_time?: string;
+  birth_place?: string;
 }
 
 export interface DuplicateNameContext {

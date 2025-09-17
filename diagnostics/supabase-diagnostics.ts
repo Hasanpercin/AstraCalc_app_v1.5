@@ -185,7 +185,7 @@ export class SupabaseDiagnostics {
       
       // Check if client has required methods
       const requiredMethods = ['from', 'auth', 'rpc'];
-      const missingMethods = requiredMethods.filter(method => !(method in supabase));
+      const missingMethods = requiredMethods.filter(method => supabase && !(method in supabase));
       
       if (missingMethods.length > 0) {
         return {
@@ -326,7 +326,7 @@ export class SupabaseDiagnostics {
       
       // Check if auth methods are available
       const authMethods = ['signInWithPassword', 'signUp', 'signOut', 'getUser'];
-      const missingMethods = authMethods.filter(method => !(method in supabase.auth));
+      const missingMethods = authMethods.filter(method => supabase && !(method in supabase.auth));
       
       if (missingMethods.length > 0) {
         return {
@@ -377,6 +377,7 @@ export class SupabaseDiagnostics {
       const functionTests = await Promise.allSettled(
         rpcFunctions.map(async (funcName) => {
           // Test with minimal parameters to check existence
+          if (!supabase) return { funcName, error: new Error('Supabase not initialized') };
           const { error } = await supabase.rpc(funcName, {});
           return { funcName, error };
         })

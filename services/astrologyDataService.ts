@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../lib/supabase';
 
 export interface AstrologyInterpretationData {
   id: string;
@@ -8,9 +8,6 @@ export interface AstrologyInterpretationData {
   moon_sign?: string;
   rising_sign?: string;
   interpretation?: string;
-  dogum_tarihi?: string;
-  dogum_saati?: string;
-  dogum_yeri?: string;
   dogum_tarihi?: string;
   dogum_saati?: string;
   dogum_yeri?: string;
@@ -71,9 +68,6 @@ export class AstrologyDataService {
           moon_sign,
           rising_sign,
           interpretation,
-          dogum_tarihi,
-          dogum_saati,
-          dogum_yeri,
           dogum_tarihi,
           dogum_saati,
           dogum_yeri,
@@ -286,5 +280,66 @@ export class AstrologyDataService {
       isValid: errors.length === 0,
       errors
     };
+  }
+
+  /**
+   * Store user astrology interpretation data in the database
+   * @param userId - The authenticated user's UID
+   * @param data - The astrology interpretation data to store (partial data allowed)
+   * @returns Success status with optional error
+   */
+  static async storeUserAstrologyInterpretation(
+    userId: string, 
+    data: Partial<AstrologyInterpretationData> & {
+      full_name: string;
+      interpretation: string;
+    }
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!userId) {
+      return { success: false, error: 'Kullanıcı kimliği gerekli' };
+    }
+
+    try {
+      if (!supabase) {
+        return { success: false, error: 'Veritabanı bağlantısı yok' };
+      }
+
+      console.log('💾 Storing astrology interpretation for user:', userId);
+
+      const { error } = await supabase
+        .from('astrology_interpretations')
+        .upsert([{
+          user_id: userId,
+          full_name: data.full_name,
+          dogum_tarihi: data.dogum_tarihi,
+          dogum_saati: data.dogum_saati,
+          dogum_yeri: data.dogum_yeri,
+          sun_sign: data.sun_sign,
+          moon_sign: data.moon_sign,
+          rising_sign: data.rising_sign,
+          interpretation: data.interpretation,
+          updated_at: new Date().toISOString()
+        }], {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        console.error('❌ Error storing astrology data:', error);
+        return { 
+          success: false, 
+          error: `Astroloji verisi kaydedilemedi: ${error.message}` 
+        };
+      }
+
+      console.log('✅ Astrology interpretation stored successfully');
+      return { success: true };
+
+    } catch (error) {
+      console.error('💥 Unexpected error storing astrology data:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Beklenmeyen hata oluştu'
+      };
+    }
   }
 }

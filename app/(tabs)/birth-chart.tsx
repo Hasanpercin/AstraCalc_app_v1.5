@@ -339,6 +339,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
+    alignItems: 'center',
   },
   title: {
     fontSize: 28,
@@ -348,9 +349,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#CBD5E1',
-    marginTop: 4,
+    fontFamily: 'Inter-Medium',
+    color: '#A5A3FF',
   },
   notAuthenticatedContainer: {
     alignItems: 'center',
@@ -558,25 +558,17 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     paddingHorizontal: 20,
-    gap: 12,
     marginBottom: 20,
   },
   updateButton: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#F59E0B',
     paddingVertical: 16,
+    paddingHorizontal: 24,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#8B5CF6',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
   },
   updateButtonText: {
     color: '#FFFFFF',
@@ -584,9 +576,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
   },
   errorContainer: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     marginHorizontal: 20,
-    marginBottom: 24,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     padding: 24,
     borderRadius: 16,
     borderWidth: 1,

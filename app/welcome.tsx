@@ -15,9 +15,9 @@ export default function WelcomeScreen() {
   // Redirect if user is already authenticated
   React.useEffect(() => {
     if (user && !loading) {
-      router.replace('/(tabs)');
+      router.push('/(tabs)');
     }
-  }, [user, loading]);
+  }, [user, loading, router]);
 
   if (loading) {
     return (

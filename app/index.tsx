@@ -10,14 +10,20 @@ export default function IndexScreen() {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/welcome');
+    const handleNavigation = async () => {
+      if (!loading) {
+        if (user) {
+          // Kullanıcı varsa tabs sayfasına yönlendir
+          router.push('/(tabs)');
+        } else {
+          // Kullanıcı yoksa welcome sayfasına yönlendir
+          router.push('/welcome');
+        }
       }
-    }
-  });
+    };
+    
+    handleNavigation();
+  }, [user, loading]);
 
   // Show loading screen while checking auth
   if (loading) {

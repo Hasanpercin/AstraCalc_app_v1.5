@@ -1,5 +1,5 @@
-import { supabase } from '@/lib/supabase';
-import { NatalChartData } from '@/types';
+import { supabase } from '../lib/supabase';
+import { NatalChartData } from '../types';
 import { LocalStorageService } from './localStorage';
 import { AstrologyDataService } from './astrologyDataService';
 
@@ -46,41 +46,36 @@ export class WebhookService {
       }
 
       // Extract Doğum Haritası Yorumu (Birth Chart Interpretation)
-      const interpretationMatch = textToParse.match(/Doğum\s+Haritası\s+Yo?urumu?:\s*([\s\S]*)/i);
+      const interpretationMatch = textToParse.match(/Doğum Haritası Yorumu[:\s]*([\s\S]*)/i);
       if (interpretationMatch) {
         data.interpretation = interpretationMatch[1].trim();
       } else {
-        // Try alternative pattern without quotes
-        const altInterpretationMatch = textToParse.match(/Doğum\s+Haritası\s+Yo?urumu?:\s*([\s\S]*)/i);
-        if (altInterpretationMatch) {
-          data.interpretation = altInterpretationMatch[1].trim();
-        }
+        // If no specific section found, use the entire text as interpretation
+        data.interpretation = textToParse;
       }
 
-      // Extract Güneş Burcu (Sun Sign)
-      const sunSignMatch = textToParse.match(/Güneş\s+Burcu:\s*([^\n\r]+)/i);
+      // Extract astrology signs if available
+      const sunSignMatch = textToParse.match(/Güneş[:\s]*([^\n,]+)/i);
       if (sunSignMatch) {
         data.sunSign = sunSignMatch[1].trim();
       }
 
-      // Extract Ay Burcu (Moon Sign)
-      const moonSignMatch = textToParse.match(/Ay\s+Burcu:\s*([^\n\r]+)/i);
+      const moonSignMatch = textToParse.match(/Ay[:\s]*([^\n,]+)/i);
       if (moonSignMatch) {
         data.moonSign = moonSignMatch[1].trim();
       }
 
-      // Extract Yükselen Burç (Rising Sign)
-      const risingSignMatch = textToParse.match(/Yükselen\s+Burç:\s*([^\n\r]+)/i);
+      const risingSignMatch = textToParse.match(/Yükselen[:\s]*([^\n,]+)/i);
       if (risingSignMatch) {
         data.risingSign = risingSignMatch[1].trim();
       }
-
-      console.log('Parsed data:', data);
-      return data;
+      
     } catch (error) {
       console.error('Error parsing birth chart response:', error);
-      return data;
+      data.interpretation = responseText; // Fallback to raw response
     }
+
+    return data;
   }
 
   // Store birth chart data in Supabase
@@ -132,82 +127,46 @@ export class WebhookService {
             birth_date: formattedBirthDate,
             birth_time: birthData.birthTime,
             birth_place: birthData.birthPlace,
+            sun_sign: parsedData.sunSign || '',
+            moon_sign: parsedData.moonSign || '',
+            rising_sign: parsedData.risingSign || '',
+            interpretation: parsedData.interpretation || '',
           },
-        ], { 
-          onConflict: 'user_id',
-          ignoreDuplicates: false 
-        });
+        ]);
 
       if (birthDataError) {
-        console.error('Birth data storage error:', birthDataError);
-        // Continue anyway, try to store astrology data
+        console.error('Birth chart data storage error:', birthDataError);
+        return localStorageResult.success 
+          ? { success: true }
+          : { success: false, error: birthDataError.message };
       }
 
-      // Use upsert for astrology interpretations as well
-      const { error: astrologyError } = await supabase
-        .from('astrology_interpretations')
-        .upsert([
-          {
-            user_id: birthData.userId,
-            sun_sign: parsedData.sunSign,
-            moon_sign: parsedData.moonSign,
-            rising_sign: parsedData.risingSign,
-            interpretation: parsedData.interpretation,
-            raw_response: parsedData.rawResponse,
-          },
-        ], { 
-          onConflict: 'user_id',
-          ignoreDuplicates: false 
-        });
-
-      if (astrologyError) {
-        console.error('Astrology data storage error:', astrologyError);
-        // If birth data succeeded but astrology failed, still return partial success
-        if (!birthDataError) {
-          console.log('Birth data stored successfully, but astrology data failed');
-        }
-      }
-
-      // Consider successful if at least one operation succeeded
-      const hasErrors = birthDataError && astrologyError;
-      if (hasErrors) {
-        throw new Error(`Storage failed - Birth: ${birthDataError?.message}, Astrology: ${astrologyError?.message}`);
-      }
-
-      console.log('Birth chart data stored/updated successfully');
-      // Also update user profile with basic birth info
-      if (birthData.userId && birthData.userId !== 'anonymous') {
-        // Split full name into first and last name for the new schema
-        const nameParts = birthData.fullName.trim().split(' ');
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.slice(1).join(' ') || '';
-
-        const { error: profileError } = await supabase.rpc('upsert_user_profile', {
-          p_user_id: birthData.userId,
-          p_first_name: firstName,
-          p_last_name: lastName,
-          p_email: null,
-          p_avatar_url: null,
-        });
+      // Store the interpretation in astrology_interpretations table if available
+      if (parsedData.interpretation && birthData.userId) {
+        const astrologyData = {
+          full_name: birthData.fullName,
+          dogum_tarihi: formattedBirthDate,
+          dogum_saati: birthData.birthTime,
+          dogum_yeri: birthData.birthPlace,
+          sun_sign: parsedData.sunSign || '',
+          moon_sign: parsedData.moonSign || '',
+          rising_sign: parsedData.risingSign || '',
+          interpretation: parsedData.interpretation
+        };
         
-        if (profileError) {
-          console.warn('Profile update failed:', profileError);
-        }
+        await AstrologyDataService.storeUserAstrologyInterpretation(
+          birthData.userId,
+          astrologyData
+        );
       }
+
+      console.log('Birth chart data stored successfully');
       return { success: true };
     } catch (error) {
-      console.error('Birth chart storage error:', error);
-      
-      // If Supabase fails but AsyncStorage succeeded, return success
-      if (localStorageResult.success) {
-        console.log('Supabase failed but AsyncStorage succeeded');
-        return { success: true };
-      }
-      
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+      console.error('Critical storage error:', error);
+      return localStorageResult.success 
+        ? { success: true }
+        : { success: false, error: error instanceof Error ? error.message : 'Unknown storage error' };
     }
   }
 
@@ -232,52 +191,59 @@ export class WebhookService {
         return { data: null, error: 'Supabase not configured and no AsyncStorage data' };
       }
 
-      console.log('🗃️ Fetching user-specific birth chart data from Supabase for user:', userId);
-      
-      // First, get birth data from birth_chart_data table
-      const { data: birthData, error: birthError } = await supabase
+      const { data, error } = await supabase
         .from('birth_chart_data')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (birthError && birthError.code !== 'PGRST116') {
-        console.error('Birth data fetch error:', birthError);
-        return { data: null, error: birthError.message };
-      }
-
-      // Second, get astrology interpretation from astrology_interpretations table
-      const astrologyResult = await AstrologyDataService.getUserAstrologyInterpretation(userId);
-      
-      if (birthData && birthData.length > 0) {
-        console.log('✅ User-specific birth chart data found in Supabase');
-
-        // Combine birth data with astrology interpretation
-        const combinedData = {
-          ...birthData[0],
-          sun_sign: astrologyResult.data?.sun_sign || null,
-          moon_sign: astrologyResult.data?.moon_sign || null,
-          rising_sign: astrologyResult.data?.rising_sign || null,
-          interpretation: astrologyResult.data?.interpretation || null,
-        };
+      if (error) {
+        console.error('Supabase query error:', error);
         
-        console.log('🎯 Combined user data prepared for return');
-        return { data: combinedData };
-      } else if (astrologyResult.data) {
-        // Only astrology data available (no birth data yet)
-        console.log('✅ Only astrology interpretation found for user');
-        return { data: astrologyResult.data };
+        // Try AsyncStorage as fallback
+        console.log('Trying AsyncStorage as fallback...');
+        const localResult = await LocalStorageService.getBirthChartData();
+        if (localResult.data) {
+          console.log('Birth chart data loaded from AsyncStorage (Supabase failed)');
+          return { data: localResult.data };
+        }
+        
+        return { data: null, error: error.message };
       }
 
-      console.log('ℹ️ No user-specific data found in database for user:', userId);
-      return { data: null };
-      
+      if (data && data.length > 0) {
+        console.log('✅ Birth chart data found for user');
+        return { data: data[0] };
+      } else {
+        console.log('📭 No birth chart data found in Supabase, checking AsyncStorage...');
+        
+        // Try AsyncStorage as fallback
+        const localResult = await LocalStorageService.getBirthChartData();
+        if (localResult.data) {
+          console.log('Birth chart data loaded from AsyncStorage (not found in Supabase)');
+          return { data: localResult.data };
+        }
+        
+        return { data: null };
+      }
     } catch (error) {
-      console.error('💥 Critical error in getBirthChartData:', error);
-      return {
-        data: null,
-        error: error instanceof Error ? error.message : 'Unknown error',
+      console.error('🔥 Critical error in getBirthChartData:', error);
+      
+      // Try AsyncStorage as final fallback
+      try {
+        const localResult = await LocalStorageService.getBirthChartData();
+        if (localResult.data) {
+          console.log('Birth chart data loaded from AsyncStorage (critical error fallback)');
+          return { data: localResult.data };
+        }
+      } catch (localError) {
+        console.error('AsyncStorage fallback also failed:', localError);
+      }
+      
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : 'Unknown critical error' 
       };
     }
   }
@@ -332,13 +298,13 @@ export class WebhookService {
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         throw error;
       }
 
       return { data: data ? data[0] : null };
     } catch (error) {
-      console.error('Get natal chart error:', error);
+      console.error('Natal chart retrieval error:', error);
       return {
         data: null,
         error: error instanceof Error ? error.message : 'Unknown error',

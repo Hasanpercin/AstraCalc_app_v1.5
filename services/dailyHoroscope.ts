@@ -39,6 +39,7 @@ export class DailyHoroscopeService {
               user_id: userId,
               comment: cacheResult.data.comment,
               horoscope_date: cacheResult.data.horoscope_date,
+              meta: '',
               created_at: cacheResult.data.cached_at,
               updated_at: cacheResult.data.cached_at
             },
@@ -64,7 +65,6 @@ export class DailyHoroscopeService {
             user_id: userId,
             comment: cacheResult.data.comment,
             horoscope_date: cacheResult.data.horoscope_date,
-            meta: '',
             meta: '',
             created_at: cacheResult.data.cached_at,
             updated_at: cacheResult.data.cached_at
@@ -177,7 +177,7 @@ export class DailyHoroscopeService {
       }
 
       const userBirthData = birthData && birthData.length > 0 ? birthData[0] : null;
-      
+
       // Generate personalized horoscope comment
       const horoscopeComment = this.generatePersonalizedComment(userBirthData);
 
@@ -241,12 +241,12 @@ export class DailyHoroscopeService {
       // General positive comments
       `${dayOfWeek} günü size güzel fırsatlar sunacak. İçgüdülerinizi takip edin ve yaratıcı projelerinize odaklanın.`,
       `${dateStr} tarihinde yıldızlar lehinizdе. Yeni başlangıçlar için mükemmel bir zaman. Cesaretinizi toplayın ve harekete geçin.`,
+      `Bugün yaratıcılığınızın zirvesinde olacaksınız. Sanatsal projelerinize ve hobilerinize zaman ayırın.`,
+      `Finansal konularda dikkatli davranmanız gereken bir gün. Tasarruf etme fırsatlarını değerlendirin.`,
       `Bugün duygusal dengenizi korumanız önemli. Sevdiklerinizle vakit geçirin ve iç huzurunuzu bulun.`,
       `Kariyerinizde önemli adımlar atmaya hazır olun. ${dayOfWeek} günü aldığınız kararlar geleceğinizi şekillendirebilir.`,
       `İletişim becerileriniz bugün ön planda. Önemli görüşmeler ve yeni bağlantılar kurma zamanı.`,
       `Sezgileriniz ${dateStr} tarihinde çok güçlü. İç sesinizi dinleyin ve kalbinizin sesini takip edin.`,
-      `Bugün yaratıcılığınızın zirvesinde olacaksınız. Sanatsal projelerinize ve hobilerinize zaman ayırın.`,
-      `Finansal konularda dikkatli davranmanız gereken bir gün. Tasarruf etme fırsatlarını değerlendirin.`,
     ];
 
     // Add personalized elements if birth data is available
@@ -331,7 +331,7 @@ export class DailyHoroscopeService {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('daily_horoscopes')
         .delete()
         .lt('horoscope_date', cutoffDate.toISOString().split('T')[0]);
@@ -346,10 +346,10 @@ export class DailyHoroscopeService {
 
       return {
         success: true,
-        deleted: data?.length || 0
+        deleted: 0 // Supabase delete doesn't return count by default
       };
     } catch (error) {
-      console.error('Cleanup horoscopes error:', error);
+      console.error('Cleanup error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

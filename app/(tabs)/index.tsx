@@ -11,9 +11,12 @@ import { supabase } from '../../lib/supabase';
 
 interface DailyHoroscope {
   id: string;
+  user_id: string;
   comment: string;
   horoscope_date: string;
+  meta: string;
   created_at: string;
+  updated_at: string;
 }
 
 export default function HomeScreen() {
@@ -47,89 +50,22 @@ export default function HomeScreen() {
     }
 
     try {
-      console.log('🏠 Home screen checking if user has astrology data');
-      const result = await AstrologyDataService.hasUserAstrologyData(user.id);
-      
-      if (result.error) {
-        console.warn('⚠️ Error checking astrology data existence:', result.error);
-        setHasExistingChart(false);
-      } else {
-        setHasExistingChart(result.hasData);
-        console.log('🎯 User has existing chart:', result.hasData);
-      }
+      console.log('🔍 Checking for existing chart for user:', user.id);
+      const astrologyData = await AstrologyDataService.getUserAstrologyInterpretation(user.id);
+      setHasExistingChart(!!astrologyData);
+      console.log('📊 Has existing chart:', !!astrologyData);
     } catch (error) {
-      console.error('❌ Error checking existing chart on home screen:', error);
+      console.error('❌ Error checking existing chart:', error);
       setHasExistingChart(false);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadTodaysHoroscope = async (force: boolean = false) => {
-    if (!user?.id) {
-      setHoroscopeLoading(false);
+  const loadUserName = async () => {
+    if (!user?.id || !supabase) {
       return;
     }
-
-    try {
-      if (!force) {
-        setHoroscopeLoading(true);
-      }
-
-      const result = await DailyHoroscopeService.getTodaysHoroscope(user.id);
-      
-      if (result.horoscope) {
-        setTodaysHoroscope(result.horoscope);
-      } else {
-        // Try to generate if none exists
-        const generateResult = await DailyHoroscopeService.generateTodaysHoroscope(user.id);
-        if (generateResult.success && generateResult.horoscope) {
-          setTodaysHoroscope(generateResult.horoscope);
-        } else {
-          setTodaysHoroscope(null);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading today\'s horoscope:', error);
-      setTodaysHoroscope(null);
-    } finally {
-      setHoroscopeLoading(false);
-    }
-  };
-
-  const setupDailyRefresh = () => {
-    // Set up daily auto-refresh at 09:00 AM
-    const scheduleNextRefresh = () => {
-      const now = new Date();
-      const next9AM = new Date(now);
-      
-      // If it's past 9 AM today, schedule for tomorrow at 9 AM
-      if (now.getHours() >= 9) {
-        next9AM.setDate(next9AM.getDate() + 1);
-      }
-      next9AM.setHours(9, 0, 0, 0);
-      
-      const timeUntilNext9AM = next9AM.getTime() - now.getTime();
-      
-      // Clear existing timeout
-      if (refreshIntervalRef.current) {
-        clearTimeout(refreshIntervalRef.current);
-      }
-      
-      // Set timeout for next 9 AM
-      refreshIntervalRef.current = setTimeout(() => {
-        loadTodaysHoroscope(true);
-        scheduleNextRefresh(); // Schedule the next one
-      }, timeUntilNext9AM);
-      
-      console.log(`📅 Next horoscope refresh scheduled for: ${next9AM.toLocaleString('tr-TR')}`);
-    };
-    
-    scheduleNextRefresh();
-  };
-
-  const loadUserName = async () => {
-    if (!user?.id || !supabase) return;
 
     try {
       const { data, error } = await supabase
@@ -139,25 +75,42 @@ export default function HomeScreen() {
         .single();
 
       if (data && !error) {
-        // Önce full_name'i kontrol et, yoksa first_name + last_name birleştir
-        let displayName = data.full_name;
-        if (!displayName && data.first_name && data.last_name) {
-          displayName = `${data.first_name} ${data.last_name}`;
-        } else if (!displayName && data.first_name) {
-          displayName = data.first_name;
-        }
-        
-        setUserFullName(displayName || '');
-        console.log('👤 User name loaded for welcome message:', displayName);
-      } else if (error && error.code !== 'PGRST116') {
-        console.warn('Failed to load user name:', error);
+        setUserFullName(data.full_name || `${data.first_name} ${data.last_name}`.trim());
       }
     } catch (error) {
       console.error('Error loading user name:', error);
     }
   };
 
-  const formatHoroscopeDate = (dateString: string) => {
+  const loadTodaysHoroscope = async (forceRefresh: boolean = false) => {
+    if (!user?.id) return;
+
+    try {
+      setHoroscopeLoading(true);
+      console.log('🌟 Loading today\'s horoscope, forceRefresh:', forceRefresh);
+      
+      const result = await DailyHoroscopeService.getTodaysHoroscope(user.id);
+      setTodaysHoroscope(result.horoscope);
+      console.log('✨ Today\'s horoscope loaded:', !!result.horoscope);
+    } catch (error) {
+      console.error('❌ Error loading today\'s horoscope:', error);
+      setTodaysHoroscope(null);
+    } finally {
+      setHoroscopeLoading(false);
+    }
+  };
+
+  const setupDailyRefresh = () => {
+    // Refresh horoscope every 4 hours
+    const intervalId = setInterval(() => {
+      console.log('⏰ Auto-refreshing horoscope...');
+      loadTodaysHoroscope(true);
+    }, 4 * 60 * 60 * 1000);
+
+    refreshIntervalRef.current = intervalId as any;
+  };
+
+  const formatHoroscopeDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString('tr-TR', {
       day: 'numeric',
@@ -165,6 +118,7 @@ export default function HomeScreen() {
       year: 'numeric'
     });
   };
+
   return (
     <LinearGradient
       colors={['#1E1B4B', '#312E81', '#4C1D95']}

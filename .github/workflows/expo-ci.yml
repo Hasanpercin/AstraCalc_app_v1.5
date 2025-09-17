@@ -1,0 +1,83 @@
+name: 🔮 AstroCalc CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: 🧪 Test & Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏗 Setup repo
+      uses: actions/checkout@v4
+      
+    - name: 🏗 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📦 Install dependencies
+      run: npm ci
+      
+    - name: 🔍 TypeScript type check
+      run: npx tsc --noEmit
+      
+    - name: 🧹 ESLint check
+      run: npx expo lint
+      
+    - name: 🧪 Run tests (if available)
+      run: npm test --passWithNoTests
+      
+    - name: 📱 Verify Expo build
+      run: npx expo export --platform all --clear
+
+  security:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏗 Setup repo
+      uses: actions/checkout@v4
+      
+    - name: 🏗 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📦 Install dependencies
+      run: npm ci
+      
+    - name: 🔒 Run security audit
+      run: npm audit --audit-level moderate
+      
+    - name: 🛡️ Check for vulnerabilities
+      run: npx audit-ci --moderate
+
+  astrology-specific:
+    name: 🌟 Astrology Features Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏗 Setup repo
+      uses: actions/checkout@v4
+      
+    - name: 🔮 Verify astrology services
+      run: |
+        echo "Checking astrology data service..."
+        test -f services/astrologyDataService.ts
+        test -f services/dailyHoroscope.ts
+        test -f services/horoscopeCacheService.ts
+        echo "✅ All astrology services found!"
+        
+    - name: 🗃️ Verify Supabase migrations
+      run: |
+        echo "Checking Supabase setup..."
+        test -d supabase/migrations
+        test -f lib/supabase.ts
+        echo "✅ Supabase configuration verified!"

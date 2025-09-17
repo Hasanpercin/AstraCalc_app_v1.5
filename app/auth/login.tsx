@@ -4,89 +4,98 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
-import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
+import FormInput from '../../components/FormInput';
+import { ValidationService } from '../../utils/validation';
+import { Star, ArrowLeft, User, Lock } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { signIn, loading: authLoading } = useAuth();
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const validateForm = () => {
-    if (!email.trim()) {
-      Alert.alert('Hata', 'E-posta adresi gereklidir.');
-      return false;
-    }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Hata', 'Geçerli bir e-posta adresi girin.');
-      return false;
-    }
+  const validateForm = (): boolean => {
+    const newErrors: { [key: string]: string } = {};
 
-    if (!password.trim()) {
-      Alert.alert('Hata', 'Şifre gereklidir.');
-      return false;
+    // Email validation
+    if (!formData.email) {
+      newErrors.email = 'E-posta adresi gerekli';
+    } else if (!ValidationService.validateEmail(formData.email)) {
+      newErrors.email = 'Geçerli bir e-posta adresi girin';
     }
 
-    if (password.length < 6) {
-      Alert.alert('Hata', 'Şifre en az 6 karakter olmalıdır.');
-      return false;
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = 'Şifre gerekli';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Şifre en az 6 karakter olmalı';
     }
 
-    return true;
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = async () => {
-    if (!validateForm()) return;
+  const handleSignIn = async () => {
+    if (!validateForm()) {
+      return;
+    }
 
     setLoading(true);
     
     try {
-      if (!supabase) {
-        // Demo mode - simulate login
+      console.log('🔐 Attempting sign in with:', formData.email);
+      
+      const result = await signIn(formData.email, formData.password);
+      
+      if (result.error) {
+        console.error('❌ Sign in error:', result.error);
         Alert.alert(
-          'Demo Modu',
-          'Supabase yapılandırılmamış. Demo modunda giriş yapılıyor.',
-          [{ text: 'Tamam', onPress: () => router.replace('/(tabs)') }]
+          'Giriş Hatası', 
+          result.error.message || 'Giriş yapılamadı. E-posta ve şifrenizi kontrol edin.'
         );
-        return;
+      } else {
+        console.log('✅ Sign in successful');
+        // Başarılı giriş sonrası tabs sayfasına yönlendir
+        router.push('/(tabs)');
       }
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password,
-      });
-
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          Alert.alert('Hata', 'E-posta veya şifre hatalı.');
-        } else if (error.message.includes('Email not confirmed')) {
-          Alert.alert('Hata', 'E-posta adresinizi onaylamanız gerekiyor.');
-        } else {
-          Alert.alert('Hata', error.message);
-        }
-        return;
-      }
-
-      // Başarılı giriş
-      router.replace('/(tabs)');
     } catch (error) {
-      Alert.alert('Hata', 'Giriş yapılamadı. Lütfen tekrar deneyin.');
-      console.error('Login error:', error);
+      console.error('❌ Sign in exception:', error);
+      Alert.alert('Hata', 'Beklenmeyen bir hata oluştu.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDemoLogin = () => {
+    Alert.alert(
+      'Demo Modu',
+      'Demo modda giriş yapmak istediğinizden emin misiniz? Bu durumda verileriniz kaydedilmeyecektir.',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Demo\'ya Devam Et',
+          onPress: () => {
+            console.log('🎭 Demo mode login');
+            router.push('/(tabs)');
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -94,92 +103,102 @@ export default function LoginScreen() {
       colors={['#1E1B4B', '#312E81', '#4C1D95']}
       style={styles.container}
     >
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
       >
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
               onPress={() => router.back()}
             >
-              <ArrowLeft size={24} color="#FFFFFF" />
+              <ArrowLeft size={24} color="#8B5CF6" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Giriş Yap</Text>
+            
+            <View style={styles.logoContainer}>
+              <Star size={48} color="#8B5CF6" fill="#8B5CF6" />
+              <Text style={styles.title}>Giriş Yap</Text>
+              <Text style={styles.subtitle}>Hesabınıza erişim sağlayın</Text>
+            </View>
           </View>
 
-          <View style={styles.formContainer}>
-            <View style={styles.welcomeSection}>
-              <Text style={styles.welcomeTitle}>Hoş Geldiniz!</Text>
-              <Text style={styles.welcomeSubtitle}>
-                Astroloji yolculuğunuza devam etmek için giriş yapın
-              </Text>
-            </View>
-
+          {/* Form */}
+          <View style={styles.form}>
             {/* Email Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>E-posta</Text>
-              <View style={styles.inputContainer}>
-                <Mail size={20} color="#8B5CF6" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="E-posta adresinizi girin"
-                  placeholderTextColor="#64748B"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-            </View>
+            <FormInput
+              label="E-posta Adresi"
+              value={formData.email}
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
+              placeholder="ornek@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              error={errors.email}
+            />
 
             {/* Password Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Şifre</Text>
-              <View style={styles.inputContainer}>
-                <Lock size={20} color="#8B5CF6" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Şifrenizi girin"
-                  placeholderTextColor="#64748B"
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff size={20} color="#64748B" />
-                  ) : (
-                    <Eye size={20} color="#64748B" />
-                  )}
-                </TouchableOpacity>
-              </View>
+            <View style={styles.passwordContainer}>
+              <FormInput
+                label="Şifre"
+                value={formData.password}
+                onChangeText={(text) => setFormData({ ...formData, password: text })}
+                placeholder="Şifrenizi girin"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+                error={errors.password}
+              />
+              <TouchableOpacity
+                style={styles.passwordToggle}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Text style={styles.toggleText}>
+                  {showPassword ? 'Gizle' : 'Göster'}
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Login Button */}
+            {/* Sign In Button */}
             <TouchableOpacity
-              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
-              disabled={loading}
+              style={[styles.signInButton, (loading || authLoading) && styles.buttonDisabled]}
+              onPress={handleSignIn}
+              disabled={loading || authLoading}
             >
-              <Text style={styles.loginButtonText}>
-                {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
-              </Text>
+              {(loading || authLoading) ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.signInButtonText}>Giriş Yap</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Demo Mode Button */}
+            <TouchableOpacity
+              style={styles.demoButton}
+              onPress={handleDemoLogin}
+              disabled={loading || authLoading}
+            >
+              <Text style={styles.demoButtonText}>Demo Modda Devam Et</Text>
             </TouchableOpacity>
 
             {/* Register Link */}
-            <View style={styles.registerSection}>
+            <View style={styles.registerContainer}>
               <Text style={styles.registerText}>Hesabınız yok mu? </Text>
               <TouchableOpacity onPress={() => router.push('/auth/register')}>
-                <Text style={styles.registerLink}>Kayıt Olun</Text>
+                <Text style={styles.registerLink}>Kayıt Ol</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Forgot Password Link */}
+            <TouchableOpacity style={styles.forgotPasswordContainer}>
+              <Text style={styles.forgotPasswordText}>Şifremi Unuttum</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -191,118 +210,126 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  keyboardView: {
+  keyboardAvoid: {
     flex: 1,
   },
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingVertical: 40,
+  },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
-  },
-  formContainer: {
-    paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 40,
   },
-  welcomeSection: {
-    marginBottom: 32,
+  backButton: {
+    alignSelf: 'flex-start',
+    padding: 8,
+    marginBottom: 24,
+  },
+  logoContainer: {
     alignItems: 'center',
   },
-  welcomeTitle: {
+  title: {
     fontSize: 28,
     fontFamily: 'Inter-Bold',
     color: '#FFFFFF',
+    marginTop: 16,
     marginBottom: 8,
-    textAlign: 'center',
   },
-  welcomeSubtitle: {
+  subtitle: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#CBD5E1',
+    color: '#94A3B8',
     textAlign: 'center',
-    lineHeight: 22,
   },
-  inputGroup: {
-    marginBottom: 20,
+  form: {
+    paddingHorizontal: 20,
+    gap: 20,
   },
-  label: {
-    fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    color: '#E2E8F0',
-    marginBottom: 8,
+  passwordContainer: {
+    position: 'relative',
   },
-  inputContainer: {
-    backgroundColor: '#1E293B',
-    borderWidth: 1,
-    borderColor: '#334155',
+  passwordToggle: {
+    position: 'absolute',
+    right: 16,
+    top: 44,
+    padding: 8,
+  },
+  signInButton: {
+    backgroundColor: '#8B5CF6',
     borderRadius: 12,
-    paddingHorizontal: 16,
     paddingVertical: 16,
+    paddingHorizontal: 24,
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#FFFFFF',
-  },
-  eyeButton: {
-    padding: 4,
-  },
-  loginButton: {
-    backgroundColor: '#8B5CF6',
-    paddingVertical: 18,
-    borderRadius: 12,
+    justifyContent: 'center',
+    gap: 8,
     marginTop: 12,
     shadowColor: '#8B5CF6',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 4,
     },
     shadowOpacity: 0.4,
-    shadowRadius: 16,
+    shadowRadius: 8,
     elevation: 8,
   },
-  loginButtonDisabled: {
+  buttonDisabled: {
     backgroundColor: '#64748B',
     shadowOpacity: 0,
+    elevation: 0,
   },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
+  signInButtonText: {
+    fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    textAlign: 'center',
+    color: '#FFFFFF',
   },
-  registerSection: {
+  demoButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderWidth: 1,
+    borderColor: '#475569',
+    alignItems: 'center',
+  },
+  demoButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#94A3B8',
+  },
+  registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 24,
   },
   registerText: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#CBD5E1',
+    color: '#94A3B8',
   },
   registerLink: {
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
+    color: '#8B5CF6',
+  },
+  forgotPasswordContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+  },
+  toggleText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
     color: '#8B5CF6',
   },
 });

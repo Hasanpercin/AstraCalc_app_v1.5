@@ -1,315 +1,252 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Bell, Info, LogOut, ChevronRight, Shield, CircleHelp as HelpCircle, Star, Mail, MapPin, Trash2 } from 'lucide-react-native';
-import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../lib/supabase';
-import { useState, useEffect } from 'react';
+import { 
+  User, 
+  Settings as SettingsIcon, 
+  Bell, 
+  MessageSquare, 
+  FileText, 
+  HelpCircle, 
+  Info, 
+  LogOut,
+  ChevronRight,
+  BarChart3,
+  Trash2
+} from 'lucide-react-native';
+import { useAuth } from '../../hooks/useAuth';
 import { ChatMessageStorageService } from '../../services/chatMessageStorage';
 
+interface SettingsSection {
+  title: string;
+  items: SettingsItem[];
+}
+
+interface SettingsItem {
+  icon: React.ComponentType<any>;
+  title: string;
+  subtitle?: string;
+  route?: string;
+  action?: () => void;
+  showChevron?: boolean;
+}
+
 export default function SettingsScreen() {
-  const { user, signOut } = useAuth();
   const router = useRouter();
-  const [userProfile, setUserProfile] = useState<{full_name: string; first_name: string; last_name: string} | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [chatStats, setChatStats] = useState<{
-    totalMessages: number;
-    expiredMessages: number;
-    storageSizeKB: number;
-  } | null>(null);
+  const { user, signOut } = useAuth();
+  const [chatHistory, setChatHistory] = useState<any[]>([]);
 
   useEffect(() => {
-    loadUserProfile();
-    loadChatStats();
-  }, [user]);
+    loadChatHistory();
+  }, []);
 
-  const loadUserProfile = async () => {
-    if (!user?.id || !supabase) {
-      setLoading(false);
-      return;
-    }
-
+  const loadChatHistory = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('full_name, first_name, last_name')
-        .eq('user_id', user.id)
-        .single();
-
-      if (data && !error) {
-        setUserProfile(data);
-      } else if (error && error.code !== 'PGRST116') {
-        console.warn('Failed to load user profile:', error);
+      if (user?.id) {
+        const { messages } = await ChatMessageStorageService.loadUserMessages(user.id);
+        setChatHistory(messages || []);
       }
     } catch (error) {
-      console.error('Error loading user profile:', error);
-    } finally {
-      setLoading(false);
+      console.error('Chat geçmişi yüklenirken hata:', error);
     }
   };
 
-  const loadChatStats = async () => {
-    try {
-      const stats = await ChatMessageStorageService.getStorageStats();
-      setChatStats(stats);
-    } catch (error) {
-      console.error('Error loading chat stats:', error);
-    }
-  };
-
-  const clearChatHistory = async () => {
-    if (!user?.id) return;
-
+  const handleClearChatHistory = () => {
     Alert.alert(
-      'Sohbet Geçmişini Temizle',
-      'AI sohbet geçmişinizi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+      'Chat Geçmişini Temizle',
+      'Tüm chat geçmişiniz silinecek. Bu işlem geri alınamaz.',
       [
-        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'İptal',
+          style: 'cancel',
+        },
         {
           text: 'Temizle',
           style: 'destructive',
           onPress: async () => {
             try {
-              const result = await ChatMessageStorageService.clearUserMessages(user.id);
-              if (result.success) {
-                Alert.alert('Başarılı', 'Sohbet geçmişiniz temizlendi.');
-                loadChatStats(); // Refresh stats
-              } else {
-                Alert.alert('Hata', result.error || 'Temizleme işlemi başarısız.');
+              if (user?.id) {
+                await ChatMessageStorageService.clearUserMessages(user.id);
+                setChatHistory([]);
+                Alert.alert('Başarılı', 'Chat geçmişi temizlendi.');
               }
             } catch (error) {
-              Alert.alert('Hata', 'Beklenmeyen bir hata oluştu.');
+              Alert.alert('Hata', 'Chat geçmişi temizlenirken bir hata oluştu.');
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
 
-  const getDisplayName = () => {
-    if (userProfile?.full_name) {
-      return userProfile.full_name;
-    } else if (userProfile?.first_name && userProfile?.last_name) {
-      return `${userProfile.first_name} ${userProfile.last_name}`;
-    } else if (userProfile?.first_name) {
-      return userProfile.first_name;
-    } else {
-      return 'Kullanıcı';
-    }
-  };
-
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Alert.alert(
       'Çıkış Yap',
-      'Hesabınızdan çıkmak istediğinizden emin misiniz?',
+      'Hesabınızdan çıkış yapmak istediğinizden emin misiniz?',
       [
-        { text: 'İptal', style: 'cancel' },
-        { 
-          text: 'Çıkış Yap', 
+        {
+          text: 'İptal',
+          style: 'cancel',
+        },
+        {
+          text: 'Çıkış Yap',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = await signOut();
-              
-              // Handle both Supabase and demo mode
-              if (result && result.error && !supabase) {
-                // Demo mode - force logout
-                console.log('Demo mode logout');
-                router.replace('/welcome');
-              } else if (result && result.error) {
-                // Supabase error
-                console.error('Supabase logout error:', result.error);
-                Alert.alert('Hata', 'Çıkış yapılırken bir hata oluştu. Tekrar deneyin.');
-              } else {
-                // Success - navigation will be handled by auth state change
-                console.log('Logout successful');
-              }
-            } catch (error) {
-              console.error('Logout error:', error);
-              // Force logout anyway for demo mode or critical errors
-              Alert.alert(
-                'Çıkış Yapılıyor',
-                'Bağlantı hatası nedeniyle zorla çıkış yapılıyor.',
-                [{ 
-                  text: 'Tamam', 
-                  onPress: () => router.replace('/welcome') 
-                }]
-              );
-            }
-          }
-        }
+          onPress: signOut,
+        },
       ]
     );
   };
 
-  return (
-    <LinearGradient
-      colors={['#1E1B4B', '#312E81', '#4C1D95']}
-      style={styles.container}
+  const settingsSections: SettingsSection[] = [
+    {
+      title: 'Hesap',
+      items: [
+        {
+          icon: User,
+          title: 'Profil Bilgileri',
+          subtitle: 'Kişisel bilgilerinizi düzenleyin',
+          route: '/profile-info',
+          showChevron: true,
+        },
+        {
+          icon: SettingsIcon,
+          title: 'Doğum Bilgileri',
+          subtitle: 'Doğum tarihi ve saat bilgilerinizi düzenleyin',
+          route: '/birth-info',
+          showChevron: true,
+        },
+      ],
+    },
+    {
+      title: 'Uygulamalar',
+      items: [
+        {
+          icon: Bell,
+          title: 'Bildirim Ayarları',
+          subtitle: 'Bildirim tercihlerinizi yönetin',
+          route: '/notification-settings',
+          showChevron: true,
+        },
+        {
+          icon: FileText,
+          title: 'Gizlilik Politikası',
+          subtitle: 'Gizlilik politikamızı inceleyin',
+          route: '/privacy-policy',
+          showChevron: true,
+        },
+      ],
+    },
+    {
+      title: 'AI Chat',
+      items: [
+        {
+          icon: BarChart3,
+          title: 'Chat İstatistikleri',
+          subtitle: `${chatHistory.length} mesaj geçmişi`,
+          showChevron: false,
+        },
+        {
+          icon: Trash2,
+          title: 'Geçmişi Temizle',
+          subtitle: 'Tüm chat geçmişini sil',
+          action: handleClearChatHistory,
+          showChevron: false,
+        },
+      ],
+    },
+    {
+      title: 'Destek',
+      items: [
+        {
+          icon: HelpCircle,
+          title: 'Yardım & Destek',
+          subtitle: 'SSS ve destek merkezi',
+          showChevron: true,
+        },
+        {
+          icon: Info,
+          title: 'Hakkında',
+          subtitle: 'Uygulama versiyonu ve bilgileri',
+          showChevron: true,
+        },
+      ],
+    },
+  ];
+
+  const renderSettingsItem = (item: SettingsItem, index: number) => (
+    <TouchableOpacity
+      key={index}
+      style={styles.settingsItem}
+      onPress={() => {
+        if (item.action) {
+          item.action();
+        } else if (item.route) {
+          router.push(item.route as any);
+        }
+      }}
     >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Ayarlar</Text>
-          <Text style={styles.subtitle}>Hesap ve uygulama ayarları</Text>
+      <View style={styles.settingsItemLeft}>
+        <View style={styles.iconContainer}>
+          <item.icon size={20} color="#FFFFFF" />
         </View>
-
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileAvatar}>
-            <User size={32} color="#8B5CF6" />
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>
-              {loading ? 'Yükleniyor...' : getDisplayName()}
-            </Text>
-            <Text style={styles.profileEmail}>{user?.email || 'email@example.com'}</Text>
-          </View>
-        </View>
-
-        {/* Settings Sections */}
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionHeader}>Hesap</Text>
-          
-          <TouchableOpacity 
-            style={styles.settingItem}
-            onPress={() => router.push('/profile-info')}
-          >
-            <View style={styles.settingLeft}>
-              <User size={20} color="#8B5CF6" />
-              <View style={styles.settingContent}>
-                <Text style={styles.settingTitle}>Profil Bilgileri</Text>
-                <Text style={styles.settingSubtitle}>Kişisel ve doğum bilgilerinizi görüntüleyin</Text>
-              </View>
-            </View>
-            <ChevronRight size={20} color="#64748B" />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.settingItem}
-            onPress={() => router.push('/birth-info')}
-          >
-            <View style={styles.settingLeft}>
-              <MapPin size={20} color="#F59E0B" />
-              <View style={styles.settingContent}>
-                <Text style={styles.settingTitle}>Doğum Bilgileri</Text>
-                <Text style={styles.settingSubtitle}>Doğum haritası bilgilerinizi güncelleyin</Text>
-              </View>
-            </View>
-            <ChevronRight size={20} color="#64748B" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionHeader}>Uygulamalar</Text>
-          
-          <TouchableOpacity 
-            style={styles.settingItem}
-            onPress={() => router.push('/notification-settings')}
-          >
-            <View style={styles.settingLeft}>
-              <Bell size={20} color="#F59E0B" />
-              <View style={styles.settingContent}>
-                <Text style={styles.settingTitle}>Bildirimler</Text>
-                <Text style={styles.settingSubtitle}>Bildirim türleri ve zamanlaması</Text>
-              </View>
-            </View>
-            <ChevronRight size={20} color="#64748B" />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.settingItem}
-            onPress={() => router.push('/privacy-policy')}
-          >
-            <View style={styles.settingLeft}>
-              <Shield size={20} color="#10B981" />
-              <View style={styles.settingContent}>
-                <Text style={styles.settingTitle}>Gizlilik Politikası</Text>
-                <Text style={styles.settingSubtitle}>Veri toplama ve kullanım politikaları</Text>
-              </View>
-            </View>
-            <ChevronRight size={20} color="#64748B" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionHeader}>AI Chat</Text>
-          
-          {chatStats && (
-            <TouchableOpacity 
-              style={styles.settingItem}
-            >
-              <View style={styles.settingLeft}>
-                <HelpCircle size={20} color="#F59E0B" />
-                <View style={styles.settingContent}>
-                  <Text style={styles.settingTitle}>Sohbet İstatistikleri</Text>
-                  <Text style={styles.settingSubtitle}>
-                    {chatStats.totalMessages} mesaj, {chatStats.storageSizeKB} KB
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+        <View style={styles.textContainer}>
+          <Text style={styles.settingsItemTitle}>{item.title}</Text>
+          {item.subtitle && (
+            <Text style={styles.settingsItemSubtitle}>{item.subtitle}</Text>
           )}
+        </View>
+      </View>
+      {item.showChevron && (
+        <ChevronRight size={20} color="#666" />
+      )}
+    </TouchableOpacity>
+  );
 
-          <TouchableOpacity 
-            style={styles.settingItem}
-            onPress={clearChatHistory}
-          >
-            <View style={styles.settingLeft}>
-              <Trash2 size={20} color="#EF4444" />
-              <View style={styles.settingContent}>
-                <Text style={styles.settingTitle}>Sohbet Geçmişini Temizle</Text>
-                <Text style={styles.settingSubtitle}>Tüm AI sohbet mesajlarını sil (5 gün otomatik)</Text>
-              </View>
+  const renderSettingsSection = (section: SettingsSection, index: number) => (
+    <View key={index} style={styles.section}>
+      <Text style={styles.sectionTitle}>{section.title}</Text>
+      <View style={styles.sectionContent}>
+        {section.items.map((item, itemIndex) => renderSettingsItem(item, itemIndex))}
+      </View>
+    </View>
+  );
+
+  return (
+    <LinearGradient colors={['#0F0F23', '#1A1A3A']} style={styles.container}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Kullanıcı Profil Kartı */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatarPlaceholder}>
+              <User size={40} color="#FFFFFF" />
             </View>
-            <ChevronRight size={20} color="#64748B" />
-          </TouchableOpacity>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>
+              {user?.email?.split('@')[0] || 'Kullanıcı'}
+            </Text>
+            <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+          </View>
         </View>
 
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionHeader}>Destek</Text>
-          
-          <TouchableOpacity 
-            style={styles.settingItem}
-          >
-            <View style={styles.settingLeft}>
-              <HelpCircle size={20} color="#3B82F6" />
-              <View style={styles.settingContent}>
-                <Text style={styles.settingTitle}>Yardım ve Destek</Text>
-                <Text style={styles.settingSubtitle}>SSS, iletişim ve kullanım kılavuzu</Text>
-              </View>
-            </View>
-            <ChevronRight size={20} color="#64748B" />
-          </TouchableOpacity>
+        {/* Ayarlar Bölümleri */}
+        {settingsSections.map((section, index) => renderSettingsSection(section, index))}
 
-          <TouchableOpacity 
-            style={styles.settingItem}
-          >
-            <View style={styles.settingLeft}>
-              <Info size={20} color="#8B5CF6" />
-              <View style={styles.settingContent}>
-                <Text style={styles.settingTitle}>Hakkında</Text>
-                <Text style={styles.settingSubtitle}>Uygulama bilgileri, sürüm ve lisanslar</Text>
-              </View>
-            </View>
-            <ChevronRight size={20} color="#64748B" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity 
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <LogOut size={20} color="#EF4444" />
+        {/* Çıkış Yap Butonu */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <LogOut size={20} color="#FF6B6B" />
           <Text style={styles.logoutText}>Çıkış Yap</Text>
         </TouchableOpacity>
 
-        {/* Version Info */}
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>Astrocalc v1.0.0</Text>
-          <Text style={styles.versionSubtext}>© 2025 Tüm hakları saklıdır</Text>
-        </View>
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </LinearGradient>
   );
@@ -322,133 +259,112 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#CBD5E1',
-  },
   profileCard: {
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    marginHorizontal: 20,
-    marginBottom: 24,
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 20,
+    margin: 20,
+    marginTop: 60,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  profileAvatar: {
+  avatarContainer: {
+    marginRight: 16,
+  },
+  avatarPlaceholder: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    alignItems: 'center',
+    backgroundColor: 'rgba(165, 163, 255, 0.3)',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#8B5CF6',
+    alignItems: 'center',
   },
-  profileInfo: {
+  userInfo: {
     flex: 1,
   },
-  profileName: {
+  userName: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 4,
   },
-  profileEmail: {
+  userEmail: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#CBD5E1',
+    color: '#A5A3FF',
   },
-  settingsSection: {
+  section: {
     marginHorizontal: 20,
     marginBottom: 24,
   },
-  sectionHeader: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: '#8B5CF6',
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#A5A3FF',
     marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  settingItem: {
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
-    padding: 20,
-    borderRadius: 12,
+  sectionContent: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  settingsItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  settingLeft: {
+  settingsItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     flex: 1,
   },
-  settingContent: {
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(165, 163, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  textContainer: {
     flex: 1,
   },
-  settingTitle: {
+  settingsItemTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  settingSubtitle: {
+  settingsItemSubtitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#94A3B8',
+    color: '#A5A3FF',
   },
   logoutButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    marginHorizontal: 20,
-    padding: 18,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginBottom: 24,
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    borderRadius: 16,
+    padding: 16,
+    margin: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.3)',
   },
   logoutText: {
-    fontSize: 18,
-    fontFamily: 'Inter-Medium',
-    color: '#EF4444',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF6B6B',
+    marginLeft: 8,
   },
-  versionContainer: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingBottom: 40,
-  },
-  versionText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#94A3B8',
-    marginBottom: 4,
-  },
-  versionSubtext: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#64748B'
+  bottomSpacer: {
+    height: 100,
   },
 });

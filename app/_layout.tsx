@@ -6,7 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
-import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { useFrameworkReady } from '../hooks/useFrameworkReady';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -30,13 +30,13 @@ export default function RootLayout() {
 
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }} initialRouteName="welcome">
+      <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="welcome" />
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/register" />
         <Stack.Screen name="birth-form" />
-       <Stack.Screen name="birth-info" />
+        <Stack.Screen name="birth-info" />
         <Stack.Screen name="profile-info" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="(tabs)" />

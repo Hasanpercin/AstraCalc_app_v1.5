@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # AstroCalc main app
+  astrocalc:
+    build:
+      context: .
+      target: development
+    ports:
+      - "19000:19000"  # Expo dev server
+      - "19001:19001"  # Expo dev tools
+      - "19002:19002"  # Metro bundler
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - EXPO_NO_TELEMETRY=1
+    networks:
+      - astrocalc-network
+    depends_on:
+      - supabase-db
+      - supabase-api
+
+  # Local Supabase Database
+  supabase-db:
+    image: supabase/postgres:15.1.1.41
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: your-super-secret-jwt-token-with-at-least-32-characters-long
+      POSTGRES_DB: postgres
+    volumes:
+      - supabase-db-data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - astrocalc-network
+
+  # Supabase API
+  supabase-api:
+    image: supabase/gotrue:v2.132.3
+    ports:
+      - "9999:9999"
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:your-super-secret-jwt-token-with-at-least-32-characters-long@supabase-db:5432/postgres?search_path=auth
+      GOTRUE_SITE_URL: http://localhost:19000
+      GOTRUE_URI_ALLOW_LIST: "http://localhost:19000"
+      GOTRUE_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+    depends_on:
+      - supabase-db
+    networks:
+      - astrocalc-network
+
+  # Redis for caching (astrology calculations)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - astrocalc-network
+
+  # Nginx for production deployment
+  nginx:
+    build:
+      context: .
+      target: production
+    ports:
+      - "80:80"
+    depends_on:
+      - astrocalc
+    networks:
+      - astrocalc-network
+    profiles:
+      - production
+
+volumes:
+  supabase-db-data:
+  redis-data:
+
+networks:
+  astrocalc-network:
+    driver: bridge

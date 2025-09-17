@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "AstroCalc",
+    "slug": "astrocalc-mobile-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "astrocalc",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E1B4B"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.astrocalc.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#1E1B4B"
+      },
+      "package": "com.astrocalc.mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

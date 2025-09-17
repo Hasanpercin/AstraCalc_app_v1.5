@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar, Sun, RefreshCw, Clock } from 'lucide-react-native';
 import { useAuth } from '../../hooks/useAuth';
-import { DailyHoroscopeService } from '@/services/dailyHoroscope';
+import { DailyHoroscopeService } from '../../services/dailyHoroscope';
 
 interface DailyHoroscope {
   id: string;

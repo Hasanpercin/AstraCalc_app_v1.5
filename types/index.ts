@@ -1,11 +1,5 @@
-export interface UserProfile {
-  id: string;
-  user_id: string;
-  full_name: string;
-  email: string;
-  created_at: string;
-  updated_at: string;
-}
+// Re-export user types from user.ts to avoid duplication
+export * from './user';
 
 export interface BirthData {
   id: string;
@@ -91,4 +85,20 @@ export interface HouseData {
   degree: number;
   ruler: string;
   description: string;
+}
+
+// Chat Message Types for consistent timestamps
+export interface ChatMessage {
+  id: string;
+  text: string;
+  isUser: boolean;
+  timestamp: Date;
+}
+
+export interface StoredChatMessage {
+  id: string;
+  text: string;
+  isUser: boolean;
+  timestamp: string; // ISO string for storage
+  user_id?: string;
 }

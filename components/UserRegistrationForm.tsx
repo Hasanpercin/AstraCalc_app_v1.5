@@ -1,433 +1,384 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
-import { User, Mail, Phone, MapPin, Calendar, Clock } from 'lucide-react-native';
-import { UserRegistrationService, getRegistrationErrorMessage } from '@/services/userRegistrationService';
-import { UserRegistrationData, ValidationErrors } from '@/types/user';
-import { useAuth } from '@/hooks/useAuth';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { User, Mail, Phone, Calendar, Clock, MapPin } from 'lucide-react-native';
 
-interface UserRegistrationFormProps {
-  onRegistrationSuccess?: (userId: string) => void;
-  onRegistrationError?: (error: string) => void;
+interface UserData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  birth_date: string;
+  birth_time: string;
+  birth_place: string;
 }
 
-export default function UserRegistrationForm({
-  onRegistrationSuccess,
-  onRegistrationError
-}: UserRegistrationFormProps) {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const [registrationData, setRegistrationData] = useState<UserRegistrationData>({
+interface ValidationErrors {
+  [key: string]: string;
+}
+
+interface UserRegistrationFormProps {
+  onSubmit: (userData: UserData) => void;
+  loading?: boolean;
+}
+
+export function UserRegistrationForm({ onSubmit, loading = false }: UserRegistrationFormProps) {
+  const [userData, setUserData] = useState<UserData>({
     first_name: '',
     last_name: '',
     email: '',
     phone: '',
     birth_date: '',
     birth_time: '',
-    birth_place: ''
+    birth_place: '',
   });
 
-  /**
-   * Real-time validation as user types
-   */
-  const validateField = (field: keyof UserRegistrationData, value: string) => {
-    const tempData = { ...registrationData, [field]: value };
-    const errors = UserRegistrationService.validateRegistrationData(tempData);
-    
-    setValidationErrors(prev => ({
-      ...prev,
-      [field]: errors[field]
-    }));
-  };
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
-  /**
-   * Handle input changes with validation
-   */
-  const handleInputChange = (field: keyof UserRegistrationData, value: string) => {
-    setRegistrationData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: keyof UserData, value: string) => {
+    setUserData(prev => ({ ...prev, [field]: value }));
     
-    // Clear previous error for this field
+    // Clear validation error when user starts typing
     if (validationErrors[field]) {
-      setValidationErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-    
-    // Validate on blur (debounced validation could be added here)
-    setTimeout(() => validateField(field, value), 500);
-  };
-
-  /**
-   * Check for email duplicates
-   */
-  const checkEmailAvailability = async (email: string) => {
-    if (!email || validationErrors.email) return;
-    
-    const result = await UserRegistrationService.isEmailRegistered(email);
-    if (result.exists) {
-      setValidationErrors(prev => ({
-        ...prev,
-        email: 'This email address is already registered'
-      }));
-    } else if (result.error) {
-      console.warn('Email check failed:', result.error);
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
   };
 
-  /**
-   * Preview duplicate name situation
-   */
-  const checkNameDuplicates = async (firstName: string, lastName: string) => {
-    if (!firstName || !lastName) return;
-    
-    const result = await UserRegistrationService.getUsersByName(firstName, lastName);
-    if (result.context.has_duplicates) {
-      Alert.alert(
-        'Name Already Exists',
-        `There ${result.context.total_count === 1 ? 'is' : 'are'} ${result.context.total_count} other user${result.context.total_count === 1 ? '' : 's'} with the name "${firstName} ${lastName}". Your account will be distinguished by your email address.`,
-        [{ text: 'Understood', style: 'default' }]
-      );
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+
+    if (!userData.first_name.trim()) {
+      errors.first_name = 'İsim gerekli';
     }
+
+    if (!userData.last_name.trim()) {
+      errors.last_name = 'Soyisim gerekli';
+    }
+
+    if (!userData.email.trim()) {
+      errors.email = 'E-posta gerekli';
+    } else if (!/\S+@\S+\.\S+/.test(userData.email)) {
+      errors.email = 'Geçerli bir e-posta adresi girin';
+    }
+
+    if (!userData.phone.trim()) {
+      errors.phone = 'Telefon numarası gerekli';
+    }
+
+    if (!userData.birth_date.trim()) {
+      errors.birth_date = 'Doğum tarihi gerekli';
+    }
+
+    if (!userData.birth_time.trim()) {
+      errors.birth_time = 'Doğum saati gerekli';
+    }
+
+    if (!userData.birth_place.trim()) {
+      errors.birth_place = 'Doğum yeri gerekli';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  /**
-   * Handle registration submission
-   */
-  const handleRegistration = async () => {
-    if (!user?.id) {
-      Alert.alert('Error', 'You must be logged in to complete registration');
-      return;
-    }
-
-    // Final validation
-    const errors = UserRegistrationService.validateRegistrationData(registrationData);
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      Alert.alert('Validation Error', 'Please fix the errors below before continuing');
-      return;
-    }
-
-    setLoading(true);
-    
-    try {
-      const result = await UserRegistrationService.registerUser(user.id, registrationData);
-      
-      if (result.success) {
-        let successMessage = 'Registration completed successfully!';
-        
-        if (result.is_duplicate_name) {
-          successMessage += `\n\nNote: There are other users with the same name. Your account will be displayed as "${result.full_name}" with your email prefix for identification.`;
-        }
-        
-        Alert.alert(
-          'Registration Successful',
-          successMessage,
-          [
-            {
-              text: 'Continue',
-              onPress: () => onRegistrationSuccess?.(user.id)
-            }
-          ]
-        );
-      } else {
-        const errorMessage = result.error ? 
-          getRegistrationErrorMessage(result.error) : 
-          result.message;
-        
-        Alert.alert('Registration Failed', errorMessage);
-        onRegistrationError?.(errorMessage);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      Alert.alert('Registration Error', errorMessage);
-      onRegistrationError?.(errorMessage);
-    } finally {
-      setLoading(false);
+  const handleSubmit = () => {
+    if (validateForm()) {
+      onSubmit(userData);
+    } else {
+      Alert.alert('Hata', 'Lütfen tüm gerekli alanları doldurun');
     }
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerSection}>
-        <Text style={styles.title}>Complete Your Profile</Text>
-        <Text style={styles.subtitle}>
-          Please provide your information to create your personalized astrology profile
-        </Text>
-      </View>
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.form}>
+          <Text style={styles.title}>Kullanıcı Kayıt Formu</Text>
+          <Text style={styles.subtitle}>Astroloji yorumunuz için gerekli bilgileri girin</Text>
 
-      {/* First Name */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>First Name *</Text>
-        <View style={[styles.inputContainer, validationErrors.first_name && styles.inputError]}>
-          <User size={20} color="#8B5CF6" style={styles.inputIcon} />
-          <TextInput
-            style={styles.textInput}
-            value={registrationData.first_name}
-            onChangeText={(value) => handleInputChange('first_name', value)}
-            onBlur={() => {
-              if (registrationData.first_name && registrationData.last_name) {
-                checkNameDuplicates(registrationData.first_name, registrationData.last_name);
-              }
-            }}
-            placeholder="Enter your first name"
-            placeholderTextColor="#64748B"
-            autoCapitalize="words"
-          />
+          {/* Personal Information */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Kişisel Bilgiler</Text>
+          </View>
+
+          {/* First Name */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>İsim</Text>
+            <View style={[styles.inputContainer, validationErrors.first_name && styles.inputError]}>
+              <User size={20} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="İsminizi girin"
+                value={userData.first_name}
+                onChangeText={(value: string) => handleInputChange('first_name', value)}
+                placeholderTextColor="#64748B"
+                autoCapitalize="words"
+              />
+            </View>
+            {validationErrors.first_name && (
+              <Text style={styles.errorText}>{validationErrors.first_name}</Text>
+            )}
+          </View>
+
+          {/* Last Name */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Soyisim</Text>
+            <View style={[styles.inputContainer, validationErrors.last_name && styles.inputError]}>
+              <User size={20} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="Soyisminizi girin"
+                value={userData.last_name}
+                onChangeText={(value: string) => handleInputChange('last_name', value)}
+                placeholderTextColor="#64748B"
+                autoCapitalize="words"
+              />
+            </View>
+            {validationErrors.last_name && (
+              <Text style={styles.errorText}>{validationErrors.last_name}</Text>
+            )}
+          </View>
+
+          {/* Email */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>E-posta</Text>
+            <View style={[styles.inputContainer, validationErrors.email && styles.inputError]}>
+              <Mail size={20} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="E-posta adresinizi girin"
+                value={userData.email}
+                onChangeText={(value: string) => handleInputChange('email', value)}
+                placeholderTextColor="#64748B"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+            {validationErrors.email && (
+              <Text style={styles.errorText}>{validationErrors.email}</Text>
+            )}
+          </View>
+
+          {/* Phone */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Telefon</Text>
+            <View style={[styles.inputContainer, validationErrors.phone && styles.inputError]}>
+              <Phone size={20} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="Telefon numaranızı girin"
+                value={userData.phone}
+                onChangeText={(value: string) => handleInputChange('phone', value)}
+                placeholderTextColor="#64748B"
+                keyboardType="phone-pad"
+              />
+            </View>
+            {validationErrors.phone && (
+              <Text style={styles.errorText}>{validationErrors.phone}</Text>
+            )}
+          </View>
+
+          {/* Birth Information */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Doğum Bilgileri</Text>
+            <Text style={styles.sectionSubtitle}>
+              Astroloji yorumu için doğum bilgileriniz gereklidir
+            </Text>
+          </View>
+
+          {/* Birth Date */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Doğum Tarihi</Text>
+            <View style={styles.inputContainer}>
+              <Calendar size={20} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="DD/MM/YYYY"
+                value={userData.birth_date}
+                onChangeText={(value: string) => handleInputChange('birth_date', value)}
+                placeholderTextColor="#64748B"
+              />
+            </View>
+            {validationErrors.birth_date && (
+              <Text style={styles.errorText}>{validationErrors.birth_date}</Text>
+            )}
+          </View>
+
+          {/* Birth Time */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Doğum Saati</Text>
+            <View style={styles.inputContainer}>
+              <Clock size={20} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="HH:MM"
+                value={userData.birth_time}
+                onChangeText={(value: string) => handleInputChange('birth_time', value)}
+                placeholderTextColor="#64748B"
+              />
+            </View>
+            {validationErrors.birth_time && (
+              <Text style={styles.errorText}>{validationErrors.birth_time}</Text>
+            )}
+          </View>
+
+          {/* Birth Place */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Doğum Yeri</Text>
+            <View style={styles.inputContainer}>
+              <MapPin size={20} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="Şehir, Ülke"
+                value={userData.birth_place}
+                onChangeText={(value: string) => handleInputChange('birth_place', value)}
+                placeholderTextColor="#64748B"
+              />
+            </View>
+            {validationErrors.birth_place && (
+              <Text style={styles.errorText}>{validationErrors.birth_place}</Text>
+            )}
+          </View>
+
+          {/* Info Box */}
+          <View style={styles.infoContainer}>
+            <Text style={styles.infoText}>
+              🌟 Doğum bilgileriniz sadece astroloji yorumu için kullanılır ve güvenle saklanır.
+            </Text>
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            <Text style={styles.submitButtonText}>
+              {loading ? 'Kaydediliyor...' : 'Kayıt Ol'}
+            </Text>
+          </TouchableOpacity>
         </View>
-        {validationErrors.first_name && (
-          <Text style={styles.errorText}>{validationErrors.first_name}</Text>
-        )}
-      </View>
-
-      {/* Last Name */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Last Name *</Text>
-        <View style={[styles.inputContainer, validationErrors.last_name && styles.inputError]}>
-          <User size={20} color="#8B5CF6" style={styles.inputIcon} />
-          <TextInput
-            style={styles.textInput}
-            value={registrationData.last_name}
-            onChangeText={(value) => handleInputChange('last_name', value)}
-            onBlur={() => {
-              if (registrationData.first_name && registrationData.last_name) {
-                checkNameDuplicates(registrationData.first_name, registrationData.last_name);
-              }
-            }}
-            placeholder="Enter your last name"
-            placeholderTextColor="#64748B"
-            autoCapitalize="words"
-          />
-        </View>
-        {validationErrors.last_name && (
-          <Text style={styles.errorText}>{validationErrors.last_name}</Text>
-        )}
-      </View>
-
-      {/* Email */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Email Address *</Text>
-        <View style={[styles.inputContainer, validationErrors.email && styles.inputError]}>
-          <Mail size={20} color="#8B5CF6" style={styles.inputIcon} />
-          <TextInput
-            style={styles.textInput}
-            value={registrationData.email}
-            onChangeText={(value) => handleInputChange('email', value)}
-            onBlur={() => checkEmailAvailability(registrationData.email)}
-            placeholder="Enter your email address"
-            placeholderTextColor="#64748B"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
-        {validationErrors.email && (
-          <Text style={styles.errorText}>{validationErrors.email}</Text>
-        )}
-      </View>
-
-      {/* Phone (Optional) */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Phone Number</Text>
-        <View style={[styles.inputContainer, validationErrors.phone && styles.inputError]}>
-          <Phone size={20} color="#8B5CF6" style={styles.inputIcon} />
-          <TextInput
-            style={styles.textInput}
-            value={registrationData.phone}
-            onChangeText={(value) => handleInputChange('phone', value)}
-            placeholder="Enter your phone number (optional)"
-            placeholderTextColor="#64748B"
-            keyboardType="phone-pad"
-          />
-        </View>
-        {validationErrors.phone && (
-          <Text style={styles.errorText}>{validationErrors.phone}</Text>
-        )}
-      </View>
-
-      {/* Birth Information Section */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Birth Information (Optional)</Text>
-        <Text style={styles.sectionSubtitle}>
-          Required for personalized astrology readings
-        </Text>
-      </View>
-
-      {/* Birth Date */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Birth Date</Text>
-        <View style={styles.inputContainer}>
-          <Calendar size={20} color="#8B5CF6" style={styles.inputIcon} />
-          <TextInput
-            style={styles.textInput}
-            value={registrationData.birth_date}
-            onChangeText={(value) => handleInputChange('birth_date', value)}
-            placeholder="DD-MM-YYYY (e.g., 15-01-1990)"
-            placeholderTextColor="#64748B"
-          />
-        </View>
-      </View>
-
-      {/* Birth Time */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Birth Time</Text>
-        <View style={styles.inputContainer}>
-          <Clock size={20} color="#8B5CF6" style={styles.inputIcon} />
-          <TextInput
-            style={styles.textInput}
-            value={registrationData.birth_time}
-            onChangeText={(value) => handleInputChange('birth_time', value)}
-            placeholder="HH:MM (e.g., 14:30)"
-            placeholderTextColor="#64748B"
-          />
-        </View>
-      </View>
-
-      {/* Birth Place */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Birth Place</Text>
-        <View style={styles.inputContainer}>
-          <MapPin size={20} color="#8B5CF6" style={styles.inputIcon} />
-          <TextInput
-            style={styles.textInput}
-            value={registrationData.birth_place}
-            onChangeText={(value) => handleInputChange('birth_place', value)}
-            placeholder="City, Country (e.g., Istanbul, Turkey)"
-            placeholderTextColor="#64748B"
-          />
-        </View>
-      </View>
-
-      {/* Registration Button */}
-      <TouchableOpacity
-        style={[styles.registerButton, loading && styles.registerButtonDisabled]}
-        onPress={handleRegistration}
-        disabled={loading}
-      >
-        <Text style={styles.registerButtonText}>
-          {loading ? 'Creating Profile...' : 'Complete Registration'}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Info Note */}
-      <View style={styles.infoContainer}>
-        <Text style={styles.infoText}>
-          * Required fields. Your email address will be used to identify your account if multiple users share your name.
-        </Text>
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    flex: 1,
+    backgroundColor: '#F8FAFC',
   },
-  headerSection: {
-    marginBottom: 32,
-    alignItems: 'center',
+  scrollView: {
+    flex: 1,
+  },
+  form: {
+    padding: 20,
   },
   title: {
-    fontSize: 24,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1E293B',
     textAlign: 'center',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#CBD5E1',
+    fontSize: 16,
+    color: '#64748B',
     textAlign: 'center',
-    lineHeight: 20,
+    marginBottom: 32,
   },
   sectionHeader: {
-    marginTop: 24,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#374151',
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#94A3B8',
+    color: '#6B7280',
   },
   inputGroup: {
     marginBottom: 20,
   },
   label: {
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    color: '#E2E8F0',
+    fontWeight: '500',
+    color: '#374151',
     marginBottom: 8,
   },
   inputContainer: {
-    backgroundColor: '#1E293B',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   inputError: {
     borderColor: '#EF4444',
   },
   inputIcon: {
     marginRight: 12,
+    color: '#8B5CF6',
   },
   textInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#FFFFFF',
+    color: '#1E293B',
   },
   errorText: {
+    fontSize: 14,
     color: '#EF4444',
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
     marginTop: 4,
-    marginLeft: 4,
-  },
-  registerButton: {
-    backgroundColor: '#8B5CF6',
-    paddingVertical: 18,
-    borderRadius: 12,
-    marginTop: 16,
-    shadowColor: '#8B5CF6',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  registerButtonDisabled: {
-    backgroundColor: '#64748B',
-    shadowOpacity: 0,
-  },
-  registerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    textAlign: 'center',
   },
   infoContainer: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.2)',
+    backgroundColor: '#F0F9FF',
     borderRadius: 12,
     padding: 16,
-    marginTop: 16,
+    marginBottom: 24,
+    borderLeftWidth: 4,
+    borderLeftColor: '#0EA5E9',
   },
   infoText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#93C5FD',
+    color: '#0C4A6E',
     lineHeight: 20,
+  },
+  submitButton: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#A1A1AA',
+  },
+  submitButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
