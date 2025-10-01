@@ -26,7 +26,7 @@
     "expo-splash-screen": "~31.0.10",
     "expo-status-bar": "~3.0.8",
     "lucide-react-native": "^0.544.0",
-    "react": "19.1.0",
+    "react": "19.1.1",
     "react-dom": "19.1.0",
     "react-native": "0.81.4",
     "react-native-pager-view": "^6.9.1",
@@ -38,7 +38,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@babel/plugin-transform-typescript": "^7.28.0",
-    "@types/react": "~19.1.10",
+    "@types/react": "~19.1.16",
     "@types/react-native": "~0.73.0",
     "@types/react-native-tab-view": "^1.0.6",
     "@types/react-navigation": "^3.0.8",
