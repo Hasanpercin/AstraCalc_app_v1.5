@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Mail, Calendar, MapPin, Save } from 'lucide-react-native';
+import { ArrowLeft, User, Calendar } from 'lucide-react-native';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 
@@ -191,7 +191,7 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>E-posta Adresi *</Text>
               <View style={styles.inputContainer}>
-                <Mail size={20} color="#8B5CF6" style={styles.inputIcon} />
+                <Text style={styles.inputIconText}>📧</Text>
                 <TextInput
                   style={styles.textInput}
                   value={profileData.email}
@@ -226,8 +226,8 @@ export default function ProfileScreen() {
                 <User size={20} color="#3B82F6" />
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Kullanıcı ID</Text>
-                  <Text style={styles.infoValue}>
-                    {user?.id?.slice(0, 8) + '...' || 'Bilinmiyor'}
+                  <Text style={[styles.infoValue, styles.userIdText]}>
+                    {user?.id || 'Bilinmiyor'}
                   </Text>
                 </View>
               </View>
@@ -239,7 +239,7 @@ export default function ProfileScreen() {
                 style={styles.actionButton}
                 onPress={() => router.push('/birth-form')}
               >
-                <MapPin size={20} color="#F59E0B" />
+                <Text style={styles.actionIcon}>📍</Text>
                 <Text style={styles.actionButtonText}>Doğum Bilgileri</Text>
               </TouchableOpacity>
             </View>
@@ -250,7 +250,7 @@ export default function ProfileScreen() {
               onPress={saveProfile}
               disabled={saving}
             >
-              <Save size={20} color="#FFFFFF" />
+              <Text style={styles.saveIcon}>✔️</Text>
               <Text style={styles.saveButtonText}>
                 {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
               </Text>
@@ -394,6 +394,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#E2E8F0',
   },
+  userIdText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Mono',
+  },
   quickActions: {
     marginBottom: 32,
   },
@@ -438,5 +442,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
+  },
+  inputIconText: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  actionIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  saveIcon: {
+    fontSize: 20,
+    marginRight: 8,
   },
 });

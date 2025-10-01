@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Dimensions, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Star, Calendar, Heart, TrendingUp } from 'lucide-react-native';
@@ -11,22 +11,16 @@ export default function ZodiacDetailScreen() {
   const router = useRouter();
   const { sign, name } = useLocalSearchParams();
   
-  const zodiacKey = (sign as string)?.toLowerCase();
-  const data = ZodiacService.getZodiacSign(zodiacKey);
-
-  // Debug için
-  console.log('Zodiac Detail Debug:', {
-    sign,
-    name,
-    zodiacKey,
-    dataFound: !!data
-  });
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   // 3D Card Animation
   const [animatedValue] = useState(new Animated.Value(0));
   const [isFlipped, setIsFlipped] = useState(false);
 
   useEffect(() => {
+    loadZodiacData();
+    
     // Initial entrance animation
     Animated.spring(animatedValue, {
       toValue: 0,
@@ -35,6 +29,27 @@ export default function ZodiacDetailScreen() {
       friction: 8,
     }).start();
   }, []);
+
+  const loadZodiacData = async () => {
+    try {
+      setLoading(true);
+      const zodiacKey = (sign as string)?.toLowerCase();
+      const zodiacData = await ZodiacService.getZodiacSign(zodiacKey);
+      
+      console.log('Zodiac Detail Debug:', {
+        sign,
+        name,
+        zodiacKey,
+        dataFound: !!zodiacData
+      });
+      
+      setData(zodiacData);
+    } catch (error) {
+      console.error('Error loading zodiac data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const flipCard = () => {
     setIsFlipped(!isFlipped);
@@ -73,6 +88,19 @@ export default function ZodiacDetailScreen() {
     console.log('Navigation path:', `/zodiac/daily-horoscope?sign=${sign}&name=${name}`);
     router.push(`/zodiac/daily-horoscope?sign=${sign}&name=${name}`);
   };
+
+  if (loading) {
+    return (
+      <LinearGradient
+        colors={['#1E1B4B', '#312E81', '#4C1D95']}
+        style={styles.container}
+      >
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Yükleniyor...</Text>
+        </View>
+      </LinearGradient>
+    );
+  }
 
   if (!data) {
     return (

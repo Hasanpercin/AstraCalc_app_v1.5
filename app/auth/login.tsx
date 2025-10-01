@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import FormInput from '../../components/FormInput';
 import { ValidationService } from '../../utils/validation';
-import { Star, ArrowLeft, User, Lock } from 'lucide-react-native';
+import { Star, ArrowLeft, User } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -196,7 +196,10 @@ export default function LoginScreen() {
             </View>
 
             {/* Forgot Password Link */}
-            <TouchableOpacity style={styles.forgotPasswordContainer}>
+            <TouchableOpacity 
+              style={styles.forgotPasswordContainer}
+              onPress={() => router.push('/auth/forgot-password')}
+            >
               <Text style={styles.forgotPasswordText}>Şifremi Unuttum</Text>
             </TouchableOpacity>
           </View>

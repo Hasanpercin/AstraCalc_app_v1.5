@@ -1,4 +1,5 @@
 import { ZodiacSign, ZodiacData, DailyZodiacHoroscope, ZodiacCompatibility } from '@/types/zodiac';
+import { supabase } from '@/lib/supabase';
 
 export class ZodiacService {
   private static zodiacData: ZodiacData = {
@@ -221,16 +222,124 @@ export class ZodiacService {
   };
 
   /**
-   * Tüm burç verilerini getirir
+   * Tüm burç verilerini Supabase'den getirir
    */
-  static getAllZodiacSigns(): ZodiacData {
+  static async getAllZodiacSigns(): Promise<ZodiacData> {
+    try {
+      if (!supabase) {
+        console.warn('Supabase not configured, using fallback data');
+        return this.zodiacData;
+      }
+
+      const { data, error } = await supabase
+        .from('zodiac_signs')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching zodiac signs:', error);
+        return this.zodiacData;
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('No zodiac data found, using fallback');
+        return this.zodiacData;
+      }
+
+      // Transform Supabase data to ZodiacData format
+      const zodiacData: ZodiacData = {};
+      data.forEach((sign: any) => {
+        const key = sign.name.toLowerCase();
+        zodiacData[key] = {
+          id: sign.english_name.toLowerCase(),
+          name: sign.name,
+          symbol: sign.symbol,
+          element: sign.element || '',
+          dates: sign.date_range || '',
+          description: sign.description || sign.overview_content || '',
+          traits: {
+            positive: sign.traits_positive || [],
+            negative: sign.traits_negative || []
+          },
+          compatibility: sign.compatibility_high || [],
+          luckyNumbers: sign.lucky_numbers || [],
+          luckyColors: sign.lucky_colors || [],
+          planet: sign.ruling_planet || '',
+          gemstone: sign.gemstone || '',
+          bodyPart: '' // Not in new schema
+        };
+      });
+
+      return zodiacData;
+    } catch (error) {
+      console.error('Exception in getAllZodiacSigns:', error);
+      return this.zodiacData;
+    }
+  }
+
+  /**
+   * Tüm burç verilerini getirir (senkron - fallback)
+   */
+  static getAllZodiacSignsSync(): ZodiacData {
     return this.zodiacData;
   }
 
   /**
-   * Belirli bir burç hakkında bilgi getirir
+   * Belirli bir burç hakkında bilgi getirir (Supabase)
    */
-  static getZodiacSign(signName: string): ZodiacSign | null {
+  static async getZodiacSign(signName: string): Promise<ZodiacSign | null> {
+    try {
+      if (!supabase) {
+        return this.getZodiacSignSync(signName);
+      }
+
+      // signName could be: "aries", "koc", "Koç" etc.
+      const normalizedName = signName.toLowerCase().trim();
+      
+      const { data, error } = await supabase
+        .from('zodiac_signs')
+        .select('*')
+        .or(`name.ilike.%${signName}%,english_name.ilike.%${signName}%`)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching zodiac sign:', error);
+        return this.getZodiacSignSync(signName);
+      }
+
+      if (!data) {
+        console.warn(`No zodiac sign found for: ${signName}, using fallback`);
+        return this.getZodiacSignSync(signName);
+      }
+
+      return {
+        id: data.english_name.toLowerCase(),
+        name: data.name,
+        symbol: data.symbol,
+        element: data.element || '',
+        dates: data.date_range || '',
+        description: data.description || data.overview_content || '',
+        traits: {
+          positive: data.traits_positive || [],
+          negative: data.traits_negative || []
+        },
+        compatibility: data.compatibility_high || [],
+        luckyNumbers: data.lucky_numbers || [],
+        luckyColors: data.lucky_colors || [],
+        planet: data.ruling_planet || '',
+        gemstone: data.gemstone || '',
+        bodyPart: ''
+      };
+    } catch (error) {
+      console.error('Exception in getZodiacSign:', error);
+      return this.getZodiacSignSync(signName);
+    }
+  }
+
+  /**
+   * Belirli bir burç hakkında bilgi getirir (senkron - fallback)
+   */
+  static getZodiacSignSync(signName: string): ZodiacSign | null {
     const normalizedName = signName.toLowerCase().trim();
     return this.zodiacData[normalizedName] || null;
   }
@@ -275,9 +384,9 @@ export class ZodiacService {
   /**
    * İki burç arasındaki uyumu hesaplar
    */
-  static calculateCompatibility(sign1: string, sign2: string): ZodiacCompatibility | null {
-    const zodiac1 = this.getZodiacSign(sign1);
-    const zodiac2 = this.getZodiacSign(sign2);
+  static async calculateCompatibility(sign1: string, sign2: string): Promise<ZodiacCompatibility | null> {
+    const zodiac1 = await this.getZodiacSign(sign1);
+    const zodiac2 = await this.getZodiacSign(sign2);
 
     if (!zodiac1 || !zodiac2) {
       return null;
@@ -317,36 +426,80 @@ export class ZodiacService {
   }
 
   /**
-   * Günlük burç yorumu oluşturur (mock data)
+   * Günlük burç yorumu oluşturur (Supabase'den çek veya fallback)
    */
-  static generateDailyHoroscope(signName: string, date: Date): DailyZodiacHoroscope | null {
-    const zodiac = this.getZodiacSign(signName);
-    if (!zodiac) return null;
+  static async generateDailyHoroscope(signName: string, date: Date): Promise<DailyZodiacHoroscope | null> {
+    try {
+      const zodiac = await this.getZodiacSign(signName);
+      if (!zodiac) return null;
 
-    const horoscopes = [
-      "Bugün enerjiniz yüksek. Yeni projelere başlamak için ideal bir gün.",
-      "Sabırlı olun ve planlarınızı dikkatlice gözden geçirin.",
-      "İletişiminize özen gösterin. Yanlış anlaşılmalar olabilir.",
-      "Yaratıcılığınızı ön plana çıkaracak fırsatlar sizi bekliyor.",
-      "Finansal konularda dikkatli olun. Gereksiz harcamalardan kaçının."
-    ];
+      const dateString = date.toISOString().split('T')[0];
 
-    const randomIndex = Math.floor(Math.random() * horoscopes.length);
+      // Try to fetch from Supabase zodiac_daily_predictions
+      if (supabase) {
+        // First get the sign_id
+        const { data: signData, error: signError } = await supabase
+          .from('zodiac_signs')
+          .select('id')
+          .or(`name.ilike.%${signName}%,english_name.ilike.%${signName}%`)
+          .maybeSingle();
 
-    return {
-      id: `${zodiac.id}-${date.getTime()}`,
-      zodiacSign: zodiac.name,
-      date: date.toISOString(),
-      generalFortune: horoscopes[randomIndex],
-      loveFortune: "Aşk hayatınızda pozitif gelişmeler olabilir.",
-      careerFortune: "Kariyerinizde yeni fırsatlar doğabilir.",
-      healthFortune: "Sağlığınıza dikkat edin ve düzenli beslenin.",
-      luckyColor: zodiac.luckyColors[0],
-      luckyNumber: zodiac.luckyNumbers[0],
-      compatibility: zodiac.compatibility[0],
-      advice: "Kendinize güvenin ve pozitif düşünün.",
-      createdAt: new Date().toISOString()
-    };
+        if (signData && !signError) {
+          const { data, error } = await supabase
+            .from('zodiac_daily_predictions')
+            .select('*')
+            .eq('sign_id', signData.id)
+            .eq('prediction_date', dateString)
+            .maybeSingle();
+
+          if (data && !error) {
+            return {
+              id: data.id.toString(),
+              zodiacSign: signName,
+              date: data.prediction_date,
+              generalFortune: data.general_fortune,
+              loveFortune: data.love_fortune || 'Aşk hayatınızda dengeyi koruyun.',
+              careerFortune: data.career_fortune || 'Kariyerinizde sabırlı olun.',
+              healthFortune: data.health_fortune || 'Sağlığınıza dikkat edin.',
+              luckyColor: data.lucky_color || zodiac.luckyColors[0],
+              luckyNumber: data.lucky_number || zodiac.luckyNumbers[0],
+              compatibility: zodiac.compatibility[0],
+              advice: 'Pozitif düşünün ve kendinize güvenin.',
+              createdAt: data.created_at
+            };
+          }
+        }
+      }
+
+      // Fallback: Generate mock horoscope
+      const horoscopes = [
+        "Bugün enerjiniz yüksek. Yeni projelere başlamak için ideal bir gün.",
+        "Sabırlı olun ve planlarınızı dikkatlice gözden geçirin.",
+        "İletişiminize özen gösterin. Yanlış anlaşılmalar olabilir.",
+        "Yaratıcı fikirleriniz ön plana çıkacak. Kendinizi ifade edin.",
+        "Finansal konularda dikkatli olun ve impulsif kararlardan kaçının."
+      ];
+
+      const randomIndex = Math.floor(Math.random() * horoscopes.length);
+
+      return {
+        id: `${zodiac.id}-${date.getTime()}`,
+        zodiacSign: zodiac.name,
+        date: date.toISOString().split('T')[0],
+        generalFortune: horoscopes[randomIndex],
+        loveFortune: "Aşk hayatınızda yeni başlangıçlar olabilir.",
+        careerFortune: "Kariyerinizde önemli adımlar atacaksınız.",
+        healthFortune: "Sağlığınıza dikkat edin ve düzenli uyuyun.",
+        luckyColor: zodiac.luckyColors[0],
+        luckyNumber: zodiac.luckyNumbers[0],
+        compatibility: zodiac.compatibility[0],
+        advice: "Kendinize güvenin ve pozitif düşünün.",
+        createdAt: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error generating horoscope:', error);
+      return null;
+    }
   }
 
   /**

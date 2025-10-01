@@ -88,17 +88,6 @@ const DailyHoroscopePage: React.FC = () => {
   const [horoscope, setHoroscope] = useState<DailyHoroscope | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Mock horoscope data
-  const mockHoroscope: DailyHoroscope = {
-    id: 1,
-    sign_id: sign.id,
-    date: selectedDate,
-    general_overview: `${sign.name} burcu için bugün enerjiniz yüksek. Yeni projelere başlamak için uygun bir gün. ${sign.element} elementinin etkisiyle yaratıcılığınız öne çıkıyor.`,
-    love_commentary: `Aşk hayatınızda pozitif gelişmeler olabilir. ${sign.ruling_planet} gezegeninin etkisiyle duygusal bağlarınız güçleniyor. Partnernizle iletişimde açık olun.`,
-    career_commentary: `Kariyerinizde önemli fırsatlar kapınızı çalabilir. ${sign.quality} niteliğiniz sayesinde zorluklarla başa çıkmakta başarılı olacaksınız. İş birliklerine odaklanın.`,
-    health_commentary: `Sağlığınıza dikkat edin ve düzenli beslenin. ${sign.element} elementinin etkisiyle vücut enerjiniz dengelenmeye ihtiyaç duyuyor. Dinlenmeyi ihmal etmeyin.`
-  };
-
   useEffect(() => {
     fetchHoroscope();
   }, [selectedDate]);
@@ -107,25 +96,53 @@ const DailyHoroscopePage: React.FC = () => {
     try {
       setLoading(true);
       
-      // For now, use mock data. Later implement Supabase call:
-      // const { data, error } = await supabase
-      //   .from('daily_horoscopes')
-      //   .select('*')
-      //   .eq('sign_id', sign.id)
-      //   .eq('date', selectedDate)
-      //   .single();
-      
-      // if (error) throw error;
-      // setHoroscope(data);
-      
-      // Simulate API call delay
-      setTimeout(() => {
-        setHoroscope(mockHoroscope);
+      if (!supabase) {
+        console.warn('Supabase not configured');
         setLoading(false);
-      }, 800);
+        return;
+      }
+
+      // Önce veritabanından günlük yorumu kontrol et
+      const { data, error } = await supabase
+        .from('zodiac_daily_predictions')
+        .select('*')
+        .eq('sign_id', sign.id)
+        .eq('prediction_date', selectedDate)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching horoscope:', error);
+        setLoading(false);
+        return;
+      }
+
+      // Eğer veritabanında varsa kullan
+      if (data) {
+        setHoroscope({
+          id: data.id,
+          sign_id: data.sign_id,
+          date: data.prediction_date,
+          general_overview: data.general_overview,
+          love_commentary: data.love_commentary,
+          career_commentary: data.career_commentary,
+          health_commentary: data.health_commentary
+        });
+      } else {
+        // Yoksa genel bir yorum göster
+        setHoroscope({
+          id: 0,
+          sign_id: sign.id,
+          date: selectedDate,
+          general_overview: `${sign.name} burcu için bugün enerjiniz dengeli. ${sign.element} elementinin etkisiyle doğal yetenekleriniz öne çıkıyor.`,
+          love_commentary: `${sign.ruling_planet} gezegeninin etkisiyle duygusal dengeniz yerinde. İlişkilerinizde samimi olun.`,
+          career_commentary: `${sign.quality} niteliğiniz sayesinde iş hayatınızda kararlı adımlar atabilirsiniz. Hedeflerinize odaklanın.`,
+          health_commentary: `Sağlığınıza özen gösterin. ${sign.element} elementinin enerjisini dengelemek için dinlenmeyi ihmal etmeyin.`
+        });
+      }
       
     } catch (error) {
-      console.error('Error fetching horoscope:', error);
+      console.error('Exception fetching horoscope:', error);
+    } finally {
       setLoading(false);
     }
   };

@@ -12,8 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Mail, Calendar, MapPin, Save, CreditCard as Edit } from 'lucide-react-native';
-import { Phone } from 'lucide-react-native';
+import { ArrowLeft, User, Calendar } from 'lucide-react-native';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 
@@ -250,7 +249,7 @@ export default function ProfileInfoScreen() {
               style={styles.editButton}
               onPress={() => setEditing(!editing)}
             >
-              <Edit size={20} color={editing ? "#F59E0B" : "#8B5CF6"} />
+              <Text style={styles.editIcon}>{editing ? '✏️' : '🖉'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -295,7 +294,7 @@ export default function ProfileInfoScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>E-posta Adresi *</Text>
               <View style={[styles.inputContainer, !editing && styles.inputDisabled]}>
-                <Mail size={20} color="#8B5CF6" style={styles.inputIcon} />
+                <Text style={styles.inputIconText}>📧</Text>
                 <TextInput
                   style={styles.textInput}
                   value={profileData.email}
@@ -314,7 +313,7 @@ export default function ProfileInfoScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Telefon</Text>
               <View style={[styles.inputContainer, !editing && styles.inputDisabled]}>
-                <Phone size={20} color="#8B5CF6" style={styles.inputIcon} />
+                <Text style={styles.inputIconText}>📞</Text>
                 <TextInput
                   style={styles.textInput}
                   value={profileData.phone}
@@ -336,7 +335,7 @@ export default function ProfileInfoScreen() {
                     style={styles.editBirthButton}
                     onPress={() => router.push('/birth-form')}
                   >
-                    <Edit size={16} color="#F59E0B" />
+                    <Text style={styles.birthEditIcon}>✏️</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -360,7 +359,7 @@ export default function ProfileInfoScreen() {
                   </View>
 
                   <View style={styles.birthInfoItem}>
-                    <MapPin size={20} color="#10B981" />
+                    <Text style={styles.birthInfoIcon}>📍</Text>
                     <View style={styles.birthInfoContent}>
                       <Text style={styles.birthInfoLabel}>Doğum Yeri</Text>
                       <Text style={styles.birthInfoValue}>{birthData.birth_place}</Text>
@@ -378,8 +377,8 @@ export default function ProfileInfoScreen() {
             <View style={styles.infoCard}>
               <View style={styles.infoItem}>
                 <Text style={styles.infoLabel}>Kullanıcı ID</Text>
-                <Text style={styles.infoValue}>
-                  {user?.id?.slice(0, 8) + '...' || 'Bilinmiyor'}
+                <Text style={[styles.infoValue, styles.userIdText]}>
+                  {user?.id || 'Bilinmiyor'}
                 </Text>
               </View>
 
@@ -411,7 +410,7 @@ export default function ProfileInfoScreen() {
                 onPress={saveProfile}
                 disabled={saving}
               >
-                <Save size={20} color="#FFFFFF" />
+                <Text style={styles.saveIcon}>✔️</Text>
                 <Text style={styles.saveButtonText}>
                   {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
                 </Text>
@@ -424,7 +423,7 @@ export default function ProfileInfoScreen() {
                 style={styles.addBirthButton}
                 onPress={() => router.push('/birth-form')}
               >
-                <MapPin size={20} color="#F59E0B" />
+                <Text style={styles.addBirthIcon}>📍</Text>
                 <Text style={styles.addBirthButtonText}>Doğum Bilgilerini Ekle</Text>
               </TouchableOpacity>
             )}
@@ -609,6 +608,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#E2E8F0',
   },
+  userIdText: {
+    fontSize: 11,
+    fontFamily: 'Inter-Mono',
+  },
   verified: {
     color: '#10B981',
   },
@@ -658,5 +661,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Medium',
     color: '#F59E0B',
+  },
+  editIcon: {
+    fontSize: 20,
+  },
+  inputIconText: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  birthEditIcon: {
+    fontSize: 16,
+  },
+  birthInfoIcon: {
+    fontSize: 20,
+  },
+  saveIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  addBirthIcon: {
+    fontSize: 20,
+    marginRight: 8,
   },
 });

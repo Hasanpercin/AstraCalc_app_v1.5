@@ -1,0 +1,53 @@
+# Copilot Ignore File
+# Files and directories that GitHub Copilot should not index
+
+# Dependencies
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# Build artifacts
+*.tsbuildinfo
+*.log
+
+# OS files
+.DS_Store
+*.pem
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/MCP_SETUP.md
+!.vscode/MCP_QUICK_START.md
+!.vscode/MCP_OVERVIEW.md
+!.vscode/EMAIL_WORKFLOW.md
+!.vscode/MCP_TEST_COMMANDS.md
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Large binary files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.pdf
+
+# Generated files
+expo-env.d.ts
+
+# Test coverage
+coverage/
+
+# Temporary files
+*.tmp
+*.temp

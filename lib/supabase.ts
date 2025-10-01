@@ -52,6 +52,22 @@ export const authService = {
     const { data: { user }, error } = await supabase.auth.getUser();
     return { user, error };
   },
+
+  async resetPassword(email: string) {
+    if (!supabase) throw new Error('Supabase not configured');
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'astrocalc://reset-password',
+    });
+    return { data, error };
+  },
+
+  async updatePassword(newPassword: string) {
+    if (!supabase) throw new Error('Supabase not configured');
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    return { data, error };
+  },
 };
 
 // Database functions

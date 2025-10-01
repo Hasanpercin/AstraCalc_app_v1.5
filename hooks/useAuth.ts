@@ -87,11 +87,43 @@ export function useAuth() {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    if (!supabase) {
+      throw new Error('Supabase not configured');
+    }
+    setLoading(true);
+    try {
+      const result = await authService.resetPassword(email);
+      return result;
+    } catch (error) {
+      return { data: null, error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    if (!supabase) {
+      throw new Error('Supabase not configured');
+    }
+    setLoading(true);
+    try {
+      const result = await authService.updatePassword(newPassword);
+      return result;
+    } catch (error) {
+      return { data: null, error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     user,
     loading,
     signIn,
     signUp,
     signOut,
+    resetPassword,
+    updatePassword,
   };
 }
