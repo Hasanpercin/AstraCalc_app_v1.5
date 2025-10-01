@@ -41,7 +41,7 @@
     "@types/react": "~19.1.10",
     "@types/react-native": "~0.73.0",
     "@types/react-native-tab-view": "^1.0.6",
-    "@types/react-navigation": "^3.0.8",
+    "@types/react-navigation": "^3.4.0",
     "typescript": "~5.9.2"
   }
 }
