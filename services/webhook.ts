@@ -21,7 +21,7 @@ interface ParsedBirthChartData {
 
 export class WebhookService {
   private static readonly WEBHOOK_URL = 'https://n8n.hasanpercin.xyz/webhook/33157954-4d52-4a48-9ed2-bf7f910b149d';
-  private static readonly AI_CHAT_WEBHOOK_URL = 'https://n8n.hasanpercin.xyz/webhook/7da1c0e5-153a-4dc8-a53b-4cb37322758f';
+  private static readonly AI_CHAT_WEBHOOK_URL = 'https://n8n.hasanpercin.xyz/webhook/0f44157c-3e8d-44d5-8d6e-68eb50da3ba0';
 
   // Parse webhook response to extract birth chart data
   static parseBirthChartResponse(responseText: string): ParsedBirthChartData {
