@@ -141,6 +141,54 @@
         "@modelcontextprotocol/server-everything"
       ],
       "description": "Search everything in the system (files, docs, etc.)"
+    },
+    "shadcn-ui": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/mcp-server-shadcn-ui"
+      ],
+      "description": "Shadcn UI component library integration and documentation"
+    },
+    "testsprite": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@testsprite/mcp-server"
+      ],
+      "description": "TestSprite automated testing and QA"
+    },
+    "npm": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-npm"
+      ],
+      "description": "NPM package management and documentation"
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "description": "Advanced problem-solving with chain of thought reasoning"
+    },
+    "axios": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mcp-get/axios"
+      ],
+      "description": "Axios HTTP client documentation and examples"
+    },
+    "code-runner": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mcp-server/code-runner"
+      ],
+      "description": "Run code snippets and test functions inline"
     }
   },
   // Code Context Settings

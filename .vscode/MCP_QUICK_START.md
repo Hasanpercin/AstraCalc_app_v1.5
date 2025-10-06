@@ -25,6 +25,14 @@
 - ✅ **Everything MCP** - System-wide search
 - 📧 **Email (n8n)** - n8n webhook ile email gönderimi
 
+### UI & Test Araçları (EN YENİ! 🎉)
+- ✅ **Shadcn UI MCP** - Component library (@upstash/mcp-server-shadcn-ui)
+- ✅ **TestSprite MCP** - Automated testing (@testsprite/mcp-server)
+- ✅ **NPM MCP** - Package documentation (@modelcontextprotocol/server-npm)
+- ✅ **Sequential Thinking MCP** - Advanced AI reasoning (@modelcontextprotocol/server-sequential-thinking)
+- ✅ **Axios MCP** - HTTP client patterns (@mcp-get/axios)
+- ✅ **Code Runner MCP** - Inline code execution (@mcp-server/code-runner)
+
 ## 🎯 Aktivasyon Adımları
 
 ### 1. VS Code'u Yeniden Başlat
@@ -95,6 +103,36 @@ GitHub Copilot Chat'i aç (**CMD + Shift + I**) ve dene:
 #### Test 11: Email (n8n)
 ```
 @workspace send a test email via n8n webhook
+```
+
+#### Test 12: Shadcn UI (Yeni!)
+```
+@workspace show shadcn button component examples
+```
+
+#### Test 13: TestSprite (Yeni!)
+```
+@workspace create test for AI chatbot webhook
+```
+
+#### Test 14: NPM (Yeni!)
+```
+@workspace show react-native-reanimated documentation
+```
+
+#### Test 15: Sequential Thinking (Yeni!)
+```
+@workspace analyze birth chart calculation logic step by step
+```
+
+#### Test 16: Axios (Yeni!)
+```
+@workspace show axios best practices for webhook calls
+```
+
+#### Test 17: Code Runner (Yeni!)
+```
+@workspace run this code: console.log('MCP test successful!')
 ```
 
 ## 🔍 Brave Search Ekleme (Opsiyonel)
